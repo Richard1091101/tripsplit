@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>旅帳通 TripSplit - 旅遊記帳與智慧分帳</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Html5Qrcode Scanner -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Icons"', '"Helvetica Neue"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            ios: {
+              bg: '#F2F2F7',
+              card: '#FFFFFF',
+              blue: '#007AFF',
+              green: '#34C759',
+              indigo: '#5856D6',
+              orange: '#FF9500',
+              pink: '#FF2D55',
+              purple: '#AF52DE',
+              red: '#FF3B30',
+              teal: '#5AC8FA',
+              yellow: '#FFCC00',
+              gray1: '#8E8E93',
+              gray2: '#AEAEB2',
+              gray3: '#C7C7CC',
+              gray4: '#D1D1D6',
+              gray5: '#E5E5EA',
+              gray6: '#F2F2F7',
+              separator: 'rgba(60, 60, 67, 0.14)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F2F2F7;
+      color: #1C1C1E;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      touch-action: manipulation;
+    }
+    input, textarea, select {
+      user-select: auto;
+      -webkit-user-select: auto;
+      appearance: none;
+    }
+    .safe-top { padding-top: env(safe-area-inset-top, 12px); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+    .ios-blur {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .ios-press {
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    .ios-press:active {
+      transform: scale(0.96);
+      opacity: 0.82;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .sheet-enter { animation: sheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex justify-center items-start text-slate-900 selection:bg-ios-blue selection:text-white pb-24">
+
+  <div class="w-full max-w-md min-h-screen bg-[#F2F2F7] relative flex flex-col shadow-2xl overflow-x-hidden">
+
+    <!-- iOS TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-40 bg-white/80 ios-blur border-b border-ios-separator safe-top">
+      <div class="h-12 px-4 flex items-center justify-between">
+        <div onclick="returnToPortal()" class="flex items-center gap-2 cursor-pointer ios-press">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-ios-blue to-cyan-500 flex items-center justify-center text-white text-xs shadow-sm font-black">
+            <i class="fa-solid fa-plane-departure"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-bold tracking-tight leading-none text-slate-900">旅帳通</h1>
+            <span class="text-[9px] text-ios-gray1 font-medium">TripSplit</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="syncToCloud(true)" id="cloud-sync-badge" class="ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="cloud-sync-label">試算表同步</span>
+          </button>
+          <button type="button" onclick="openSwitchIdentityModal()" class="ios-press px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1 cursor-pointer">
+            <i class="fa-regular fa-user text-ios-blue text-[10px]"></i>
+            <span id="current-user-label">小明</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-3.5 space-y-3.5 pb-28">
+
+      <!-- TRIP HERO CARD -->
+      <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span id="trip-badge-code" class="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-blue-50 text-ios-blue rounded border border-blue-100">TRIP-2026</span>
+              <span id="trip-status-badge" class="text-[10px] font-semibold px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">記帳中</span>
+            </div>
+            <h2 id="trip-title-display" class="text-lg font-bold text-slate-900 leading-tight">東京五日賞櫻團</h2>
+            <p class="text-xs text-ios-gray1 mt-1 flex items-center gap-1">
+              <i class="fa-regular fa-circle-user text-[10px]"></i>
+              主揪：<span id="trip-host-display" class="font-medium text-slate-700">小明</span>
+              <span class="mx-1">•</span>
+              <span id="trip-members-count">4</span> 位成員
+            </p>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="openTripQRModal()" class="w-9 h-9 rounded-xl bg-blue-50 hover:bg-blue-100 text-ios-blue flex items-center justify-center ios-press" title="出示邀請 QR Code">
+              <i class="fa-solid fa-qrcode text-sm"></i>
+            </button>
+            <button type="button" onclick="openManageTripsModal()" class="w-9 h-9 rounded-xl bg-[#F2F2F7] hover:bg-slate-200 text-slate-700 flex items-center justify-center ios-press" title="切換或管理行程">
+              <i class="fa-solid fa-layer-group text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div class="flex items-center -space-x-1.5 overflow-x-auto no-scrollbar py-0.5" id="trip-member-avatars"></div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="openAddMemberModal()" class="ios-press text-[11px] font-bold text-ios-blue bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1">
+              <i class="fa-solid fa-user-plus text-[10px]"></i>
+              <span>加人</span>
+            </button>
+            <button type="button" onclick="requestDeleteCurrentTrip()" class="ios-press text-[11px] font-bold text-ios-red bg-red-50 px-2 py-1 rounded-full flex items-center gap-1" title="刪除任務">
+              <i class="fa-regular fa-trash-can text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 1: EXPENSES LIST VIEW -->
+      <section id="tab-expenses-view" class="space-y-3">
+        <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] text-ios-gray1 font-medium">行程總支出 (折合 TWD)</div>
+            <div id="stat-total-expense" class="text-lg font-black text-slate-900 mt-0.5">NT$ 0</div>
+          </div>
+          <div class="flex bg-[#F2F2F7] p-0.5 rounded-xl text-xs font-semibold">
+            <button type="button" onclick="setExpenseFilter('all')" id="filter-btn-all" class="px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue">全部</button>
+            <button type="button" onclick="setExpenseFilter('mine')" id="filter-btn-mine" class="px-3 py-1 rounded-lg text-slate-500">只看我</button>
+          </div>
+        </div>
+
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-ios-gray2 text-xs"></i>
+          <input type="text" id="expense-search-input" oninput="renderExpensesList()" placeholder="搜尋消費項目、付款人或類別..." class="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-ios-blue text-slate-800" />
+        </div>
+
+        <div id="expenses-container" class="space-y-2"></div>
+
+        <div class="pt-2">
+          <button type="button" onclick="openAddExpenseModal()" class="w-full py-3.5 rounded-2xl bg-ios-blue text-white font-bold text-sm shadow-md hover:bg-blue-600 transition flex items-center justify-center gap-2 ios-press">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>記一筆消費</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB 2: SMART SETTLEMENT VIEW -->
+      <section id="tab-settle-view" class="hidden space-y-3">
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-4 shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full">最小轉帳演算法</span>
+            <button type="button" onclick="copySettlementReport()" class="text-xs font-bold bg-white text-ios-blue px-3 py-1 rounded-full ios-press flex items-center gap-1 shadow-sm">
+              <i class="fa-regular fa-copy"></i>
+              <span>複製報表</span>
+            </button>
+          </div>
+          <div class="mt-3 text-xs text-blue-100">演算法已自動抵消多角借貸，將所有人的債務化簡為最少筆直接轉帳。</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-money-bill-transfer text-ios-orange"></i>
+            <span>最佳轉帳方案 (誰該轉給誰)</span>
+          </h3>
+          <div id="settlement-transfers-container" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-scale-balanced text-ios-blue"></i>
+            <span>每人應收 / 應付淨額</span>
+          </h3>
+          <div id="settlement-balances-container" class="space-y-2"></div>
+        </div>
+
+        <button type="button" onclick="exportCSV()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition ios-press">
+          <i class="fa-solid fa-file-csv text-emerald-600"></i>
+          <span>匯出 CSV 試算表</span>
+        </button>
+      </section>
+
+      <!-- TAB 3: PERSONAL OVERVIEW DASHBOARD -->
+      <section id="tab-overview-view" class="hidden space-y-3">
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
+          <div class="w-14 h-14 rounded-full bg-blue-50 text-ios-blue flex items-center justify-center text-xl font-bold mx-auto mb-2 border border-blue-100" id="my-avatar-initial">明</div>
+          <h3 class="text-base font-bold text-slate-900" id="my-overview-name">小明</h3>
+          <p class="text-xs text-ios-gray1 mt-0.5">專屬收支即時計算儀表</p>
+
+          <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-left">
+            <div class="bg-[#F2F2F7] p-2.5 rounded-xl">
+              <div class="text-[10px] text-ios-gray1 font-medium">我已先墊付</div>
+              <div class="text-xs font-bold text-slate-900 mt-0.5" id="my-stat-paid">NT$ 0</div>
+            </div>
+            <div class="bg-[#F2F2F7] p-2.5 rounded-xl">
+              <div class="text-[10px] text-ios-gray1 font-medium">我應分攤款</div>
+              <div class="text-xs font-bold text-slate-900 mt-0.5" id="my-stat-share">NT$ 0</div>
+            </div>
+            <div class="bg-[#F2F2F7] p-2.5 rounded-xl">
+              <div class="text-[10px] text-ios-gray1 font-medium">最終應收/付</div>
+              <div class="text-xs font-bold mt-0.5" id="my-stat-net">NT$ 0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+          <h3 class="text-xs font-bold text-slate-900 mb-2">我的行動指南</h3>
+          <div id="my-actions-container" class="space-y-2 text-xs"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- iOS BOTTOM TAB BAR -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
+      <div class="w-full max-w-md bg-white/90 ios-blur border-t border-ios-separator safe-bottom pointer-events-auto px-4 py-1.5 flex items-center justify-around text-[10px] font-medium text-ios-gray1 shadow-lg">
+        <button type="button" onclick="switchMainTab('expenses')" id="nav-tab-expenses" class="flex-1 py-1 flex flex-col items-center gap-0.5 text-ios-blue transition ios-press">
+          <i class="fa-solid fa-receipt text-lg"></i>
+          <span>消費明細</span>
+        </button>
+        <button type="button" onclick="switchMainTab('settle')" id="nav-tab-settle" class="flex-1 py-1 flex flex-col items-center gap-0.5 transition ios-press">
+          <i class="fa-solid fa-calculator text-lg"></i>
+          <span>智慧結算</span>
+        </button>
+        <button type="button" onclick="switchMainTab('overview')" id="nav-tab-overview" class="flex-1 py-1 flex flex-col items-center gap-0.5 transition ios-press">
+          <i class="fa-regular fa-circle-user text-lg"></i>
+          <span>個人儀表</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- WELCOME PORTAL -->
+    <div id="welcome-portal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 ios-blur">
+      <div class="bg-white w-full max-w-sm rounded-[28px] p-6 text-center shadow-2xl space-y-4 sheet-enter">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-ios-blue to-cyan-500 text-white flex items-center justify-center text-2xl mx-auto shadow-md">
+          <i class="fa-solid fa-plane"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900">旅帳通 TripSplit</h2>
+          <p class="text-xs text-ios-gray1 mt-1">智慧旅遊記帳與最簡轉帳系統</p>
+        </div>
+        <div class="space-y-2.5 pt-2">
+          <button type="button" onclick="handlePortalChoice('create')" class="w-full py-3.5 px-4 rounded-2xl bg-ios-blue text-white font-bold text-sm shadow-sm hover:bg-blue-600 transition flex items-center justify-between ios-press">
+            <span class="flex items-center gap-2"><i class="fa-solid fa-plus-circle"></i><span>1. 建立新任務 (主揪)</span></span>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+          <button type="button" onclick="handlePortalChoice('my')" class="w-full py-3.5 px-4 rounded-2xl bg-[#F2F2F7] text-slate-800 font-bold text-sm hover:bg-slate-200 transition flex items-center justify-between ios-press">
+            <span class="flex items-center gap-2"><i class="fa-solid fa-user-tag text-ios-blue"></i><span>2. 屬於我的任務</span></span>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+          <button type="button" onclick="handlePortalChoice('join_code')" class="w-full py-3.5 px-4 rounded-2xl bg-blue-50 text-ios-blue font-bold text-sm hover:bg-blue-100 transition flex items-center justify-between ios-press">
+            <span class="flex items-center gap-2"><i class="fa-solid fa-ticket"></i><span>3. 輸入邀請碼加入</span></span>
+            <i class="fa-solid fa-camera bg-ios-blue text-white px-2 py-1 rounded text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR CODE MODAL -->
+    <div id="modal-trip-qr" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+      <div class="modal-backdrop absolute inset-0 bg-black/50 ios-blur" onclick="closeModal('modal-trip-qr')"></div>
+      <div class="relative bg-white w-full max-w-xs rounded-[28px] p-6 text-center shadow-2xl z-10 sheet-enter space-y-4">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-base font-bold text-slate-900" id="qr-modal-trip-sub">行程名稱</h3>
+          <button type="button" onclick="closeModal('modal-trip-qr')" class="text-xs font-bold text-ios-gray1"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div id="qrcode-box" class="flex justify-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm mx-auto w-fit"></div>
+        <div class="text-sm font-mono font-bold text-ios-blue bg-blue-50 py-2 rounded-xl cursor-pointer" onclick="copyTripCodeOnly()" id="qr-code-text-display" title="點擊直接複製邀請碼">TRIP-XXXX</div>
+        <div id="sandbox-warning-box" class="hidden p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 text-left leading-relaxed">
+          <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> 若朋友無法掃描網址，請朋友開啟 App 點選<strong>「輸入代碼」</strong>即可。
+        </div>
+        <div class="space-y-2 pt-2">
+          <button type="button" onclick="copyTripCodeOnly()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs shadow-sm ios-press">
+            複製純代碼 (TRIP-XXXX)
+          </button>
+          <button type="button" onclick="copyTripInviteLink()" class="w-full py-2.5 rounded-xl bg-ios-blue text-white font-bold text-xs shadow-sm ios-press">
+            複製邀請專屬訊息
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE TRIP MODAL -->
+    <div id="modal-create-trip" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-create-trip')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+          <button type="button" onclick="closeModal('modal-create-trip')" class="text-sm font-semibold text-ios-gray1">取消</button>
+          <h3 class="text-base font-bold text-slate-900">建立新任務</h3>
+          <span class="w-8"></span>
+        </div>
+        <form onsubmit="handleCreateTripSubmit(event)" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">任務名稱 *</label>
+            <input type="text" id="new-trip-title" required placeholder="例如：京都賞楓 5 日遊" class="w-full px-3 py-2.5 bg-[#F2F2F7] rounded-xl font-bold text-xs outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">主揪代號 *</label>
+            <input type="text" id="new-trip-host" required placeholder="例如：小明" class="w-full px-3 py-2.5 bg-[#F2F2F7] rounded-xl font-bold text-xs outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">初始名單 (逗號分隔)</label>
+            <input type="text" id="new-trip-members" placeholder="小華, 阿強" class="w-full px-3 py-2.5 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none" />
+          </div>
+          <button type="submit" class="w-full py-3.5 bg-ios-blue text-white font-bold text-sm rounded-xl shadow-sm hover:bg-blue-600 transition ios-press">建立並開始記帳</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ADD EXPENSE MODAL -->
+    <div id="modal-add-expense" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeExpenseModal()"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter max-h-[92vh] overflow-y-auto">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <button type="button" onclick="closeExpenseModal()" class="text-sm font-semibold text-ios-gray1">取消</button>
+          <h3 class="text-base font-bold text-slate-900">記一筆消費</h3>
+          <button type="button" onclick="submitExpenseForm()" class="text-sm font-bold text-ios-blue">儲存</button>
+        </div>
+        <form id="expense-form" onsubmit="event.preventDefault(); submitExpenseForm();" class="space-y-3.5 pt-3 text-xs">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block font-semibold text-slate-700 mb-1">消費事項 *</label>
+              <input type="text" id="expense-item-name" required placeholder="例如：一蘭拉麵" class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">類別</label>
+              <select id="expense-category" class="w-full px-2.5 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none">
+                <option value="餐飲">🍜 餐飲</option>
+                <option value="交通">🚕 交通</option>
+                <option value="住宿">🏨 住宿</option>
+                <option value="其他">📦 其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">幣別</label>
+              <select id="expense-currency" onchange="handleCurrencyChange()" class="w-full px-2 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none">
+                <option value="TWD">TWD</option><option value="JPY">JPY</option>
+                <option value="USD">USD</option><option value="KRW">KRW</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block font-semibold text-slate-700 mb-1">原始金額 *</label>
+              <input type="number" step="any" id="expense-amount" required placeholder="0" oninput="calculateExchangePreview()" class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-2.5 bg-blue-50/70 rounded-xl text-[11px] text-slate-700">
+            <div>匯率：<input type="number" step="0.0001" id="expense-exchange-rate" value="1.0000" oninput="calculateExchangePreview()" class="w-16 px-1.5 py-0.5 bg-white rounded border border-blue-200 text-center font-semibold text-[11px]" /></div>
+            <div>折合：<strong id="expense-twd-preview" class="text-ios-blue font-bold">NT$ 0</strong></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">日期</label>
+              <input type="date" id="expense-date" required class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none" />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">時間</label>
+              <input type="time" id="expense-time" required class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">誰先付錢 (付款人) *</label>
+            <select id="expense-payer" class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-bold text-xs outline-none"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">分攤方式</label>
+            <div class="grid grid-cols-3 bg-[#F2F2F7] p-0.5 rounded-xl text-xs font-semibold text-center mb-2">
+              <button type="button" onclick="setSplitMode('equal')" id="btn-split-equal" class="py-1.5 rounded-lg bg-white shadow-xs text-ios-blue">所有人均分</button>
+              <button type="button" onclick="setSplitMode('custom_amount')" id="btn-split-custom" class="py-1.5 rounded-lg text-slate-500">指定金額</button>
+              <button type="button" onclick="setSplitMode('percent')" id="btn-split-percent" class="py-1.5 rounded-lg text-slate-500">自訂佔比(%)</button>
+            </div>
+            <div id="split-participants-container" class="space-y-1.5 bg-[#F2F2F7] p-2.5 rounded-xl max-h-44 overflow-y-auto"></div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- SWITCH IDENTITY MODAL -->
+    <div id="modal-identity" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-identity')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <h3 class="text-base font-bold text-slate-900 text-center mb-1">切換我的身分代號</h3>
+        <p class="text-xs text-ios-gray1 text-center mb-4">系統將以此代號計算您的專屬清單</p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">選擇成員：</label>
+            <div id="identity-quick-picks" class="flex flex-wrap gap-2"></div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">輸入代號：</label>
+            <div class="flex gap-2">
+              <input type="text" id="identity-custom-input" placeholder="輸入稱呼" class="flex-1 px-3 py-2 bg-[#F2F2F7] rounded-xl text-xs font-bold outline-none" />
+              <button type="button" onclick="confirmIdentityCustom()" class="px-4 py-2 bg-ios-blue text-white rounded-xl font-bold text-xs ios-press">確認</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANAGE TRIPS MODAL -->
+    <div id="modal-manage-trips" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-manage-trips')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter max-h-[85vh] overflow-y-auto">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-slate-900">行程管理</h3>
+          <button type="button" onclick="closeModal('modal-manage-trips')" class="text-xs font-semibold text-ios-blue">完成</button>
+        </div>
+        <div id="manage-trips-list" class="space-y-2 mb-4"></div>
+        <button type="button" onclick="closeModal('modal-manage-trips'); openModal('modal-create-trip')" class="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-bold text-xs hover:border-ios-blue hover:text-ios-blue transition flex items-center justify-center gap-1.5 ios-press">
+          <i class="fa-solid fa-plus"></i><span>建立新任務</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ADD MEMBER MODAL -->
+    <div id="modal-add-member" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-add-member')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <h3 class="text-base font-bold text-slate-900 text-center mb-1">新增成員</h3>
+        <form onsubmit="handleAddMemberSubmit(event)" class="space-y-3 text-xs mt-4">
+          <input type="text" id="new-member-name-input" required placeholder="例如：阿哲" class="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
+          <button type="submit" class="w-full py-3 bg-ios-blue text-white font-bold text-xs rounded-xl shadow-sm ios-press">確定新增</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MANUAL JOIN BY CODE MODAL -->
+    <div id="modal-manual-join" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-manual-join')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+          <button type="button" onclick="closeModal('modal-manual-join')" class="text-sm font-semibold text-ios-gray1">取消</button>
+          <h3 class="text-base font-bold text-slate-900">輸入代碼加入</h3>
+          <button type="button" onclick="closeModal('modal-manual-join'); openCameraScannerModal();" class="text-xs font-bold text-ios-blue flex items-center gap-1">
+            <i class="fa-solid fa-camera"></i> 掃碼
+          </button>
+        </div>
+        <form onsubmit="handleManualJoinSubmit(event)" class="space-y-3.5 text-xs">
+          <input type="text" id="manual-trip-code" required placeholder="邀請代碼 (TRIP-XXXX)" class="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl font-mono font-bold text-sm uppercase outline-none" />
+          <input type="text" id="manual-join-name" required placeholder="您的稱呼" class="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
+          <button type="submit" class="w-full py-3.5 bg-ios-blue text-white font-bold text-sm rounded-xl shadow-sm ios-press">搜尋並加入</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- CAMERA SCANNER MODAL -->
+    <div id="modal-camera-scanner" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+      <div class="modal-backdrop absolute inset-0 bg-black/60 ios-blur" onclick="closeCameraScannerModal()"></div>
+      <div class="relative bg-white w-full max-w-xs rounded-[28px] p-5 text-center shadow-2xl z-10 sheet-enter space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h3 class="text-sm font-bold text-slate-900">掃描 QR Code</h3>
+          <button type="button" onclick="closeCameraScannerModal()" class="text-xs font-bold text-ios-gray1">關閉</button>
+        </div>
+        <div id="camera-scanner-view" class="w-full h-56 bg-black rounded-2xl overflow-hidden relative"></div>
+        <p class="text-[11px] text-ios-gray1">請對準主揪手機出示的條碼</p>
+      </div>
+    </div>
+
+    <!-- DIRECT JOIN MODAL (URL OR SCAN MATCH) -->
+    <div id="modal-join-trip" class="fixed inset-0 z-50 hidden flex items-end justify-center p-0">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-join-trip')"></div>
+      <div class="relative bg-white w-full max-w-md rounded-t-[32px] p-5 pb-8 shadow-2xl z-10 sheet-enter">
+        <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-3"></div>
+        <div class="text-center pt-1 mb-3">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mx-auto mb-2"><i class="fa-solid fa-ticket"></i></div>
+          <h3 class="text-base font-bold text-slate-900">受邀加入任務</h3>
+        </div>
+        <div class="p-3 bg-[#F2F2F7] rounded-2xl text-xs space-y-1.5 mb-4">
+          <div class="flex justify-between"><span class="text-ios-gray1">任務：</span><strong id="join-target-title" class="text-slate-900"></strong></div>
+          <div class="flex justify-between"><span class="text-ios-gray1">代碼：</span><span id="join-target-code" class="font-mono font-bold text-ios-blue"></span></div>
+        </div>
+        <form onsubmit="executeJoinTripAction(event)" class="space-y-3 text-xs">
+          <input type="text" id="join-my-name-input" required placeholder="您的稱呼" class="w-full px-3.5 py-2.5 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
+          <button type="submit" class="w-full py-3.5 rounded-xl bg-ios-green text-white font-bold text-xs shadow-sm ios-press">立即加入</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- DELETE TRIP MODAL -->
+    <div id="modal-delete-trip" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+      <div class="modal-backdrop absolute inset-0 bg-black/40 ios-blur" onclick="closeModal('modal-delete-trip')"></div>
+      <div class="relative bg-white w-full max-w-xs rounded-2xl p-5 text-center shadow-2xl z-10 sheet-enter space-y-2">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-ios-red flex items-center justify-center text-xl mx-auto mb-2"><i class="fa-regular fa-trash-can"></i></div>
+        <h3 class="text-base font-bold text-slate-900">確定刪除？</h3>
+        <p id="delete-trip-warning-text" class="text-xs text-ios-gray1 leading-relaxed">刪除後將一併清除該行程所有紀錄。</p>
+        <div class="pt-3 space-y-2">
+          <button type="button" onclick="confirmDeleteTripAction()" class="w-full py-2.5 rounded-xl bg-ios-red text-white font-bold text-xs ios-press">確認刪除</button>
+          <button type="button" onclick="closeModal('modal-delete-trip')" class="w-full py-2.5 rounded-xl bg-[#F2F2F7] text-slate-700 font-semibold text-xs ios-press">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-5 left-0 right-0 z-50 flex flex-col items-center pointer-events-none px-4 space-y-2"></div>
+
+  </div>
+
+  <script>
+    /* Google Apps Script API */
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxX8BZyocbPXRGPjIAcXOsOcgFfccqV6StdusLEhWM09doUSRc0dqhsPna9GHPvSPS2qw/exec';
+
+    /* Global State & Constants */
+    const DEFAULT_TRIPS = [{
+      id: 'trip_demo_tokyo',
+      code: 'TRIP-2026',
+      title: '東京五日賞櫻團',
+      host: '小明',
+      members: ['小明', '小華', '阿強', '婷婷'],
+      createdAt: '2026-03-15T10:00:00.000Z',
+      expenses: [{
+        id: 'exp_1', item: '成田 N\'EX 車票', category: '交通', currency: 'JPY', originalAmount: 16000, exchangeRate: 0.215, amountTWD: 3440, payer: '小明', date: '2026-03-15', time: '11:30', splitMode: 'equal', participants: ['小明', '小華', '阿強', '婷婷'], shares: { '小明': 860, '小華': 860, '阿強': 860, '婷婷': 860 }
+      }]
+    }];
+
+    const DEFAULT_RATES = { 'TWD': 1.0, 'JPY': 0.215, 'USD': 31.8, 'EUR': 34.5, 'KRW': 0.024 };
+
+    let trips = loadLocalTrips() || [...DEFAULT_TRIPS];
+    let deletedTripIds = loadDeletedTripIds();
+    let currentTripId = localStorage.getItem('tripsplit_current_trip_id') || (trips.length > 0 ? trips[0].id : null);
+    let currentUserName = localStorage.getItem('tripsplit_current_user') || '小明';
+    let expenseFilterMode = 'all';
+    let currentSplitMode = 'equal';
+    let pendingDeleteTripId = null;
+    let html5QrScannerInstance = null;
+    let isGASBusy = false;
+
+    window.onload = function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const joinCode = urlParams.get('joinTrip');
+      
+      if (joinCode) {
+        document.getElementById('manual-trip-code').value = joinCode;
+        handleManualJoinCode(joinCode);
+      } else if (!localStorage.getItem('tripsplit_current_user')) {
+        openModal('welcome-portal');
+      } else {
+        if (!currentTripId && trips.length > 0) currentTripId = trips[0].id;
+        renderApp();
+      }
+      
+      setInterval(() => { syncToCloud(false); }, 15000);
+    };
+
+    function saveLocalTrips() { localStorage.setItem('tripsplit_trips', JSON.stringify(trips)); }
+    function loadLocalTrips() { try { return JSON.parse(localStorage.getItem('tripsplit_trips')); } catch(e) { return null; } }
+    function loadDeletedTripIds() { try { return JSON.parse(localStorage.getItem('tripsplit_deleted_trips')) || []; } catch(e) { return []; } }
+    function saveDeletedTripIds() { localStorage.setItem('tripsplit_deleted_trips', JSON.stringify(deletedTripIds)); }
+
+    function renderApp() {
+      const trip = getCurrentTrip();
+      if (!trip) {
+        if (trips.length > 0) { currentTripId = trips[0].id; renderApp(); }
+        else { openModal('welcome-portal'); }
+        return;
+      }
+      localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+      
+      document.getElementById('current-user-label').textContent = currentUserName;
+      document.getElementById('trip-badge-code').textContent = trip.code;
+      document.getElementById('trip-title-display').textContent = trip.title;
+      document.getElementById('trip-host-display').textContent = trip.host;
+      document.getElementById('trip-members-count').textContent = (trip.members || []).length;
+
+      const avatars = document.getElementById('trip-member-avatars');
+      avatars.innerHTML = (trip.members || []).map(m => `
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white cursor-pointer ${m === currentUserName ? 'bg-ios-blue text-white' : 'bg-slate-200 text-slate-700'}">${m.charAt(0)}</div>
+      `).join('');
+
+      renderExpensesList();
+      renderSettlement();
+      renderPersonalOverview();
+    }
+
+    function renderExpensesList() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      const container = document.getElementById('expenses-container');
+      const search = (document.getElementById('expense-search-input')?.value || '').toLowerCase();
+      const totalTWD = (trip.expenses || []).reduce((sum, e) => sum + (e.amountTWD || 0), 0);
+      document.getElementById('stat-total-expense').textContent = `NT$ ${Math.round(totalTWD).toLocaleString()}`;
+
+      let list = trip.expenses || [];
+      if (expenseFilterMode === 'mine') {
+        list = list.filter(e => e.payer === currentUserName || (e.participants || []).includes(currentUserName));
+      }
+      if (search) list = list.filter(e => e.item.toLowerCase().includes(search) || e.payer.toLowerCase().includes(search));
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="bg-white p-6 text-center text-ios-gray1 border border-slate-100 rounded-2xl">尚無相符紀錄</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(exp => {
+        const isPayer = exp.payer === currentUserName;
+        const myShare = (exp.shares && exp.shares[currentUserName]) || 0;
+        return `
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="font-bold text-xs text-slate-900">${exp.item}</div>
+              <div class="text-[11px] text-ios-gray1 mt-1">${exp.payer} 先付 • ${exp.date}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-black text-slate-900">NT$ ${Math.round(exp.amountTWD).toLocaleString()}</div>
+              <div class="text-[10px] font-semibold mt-0.5 ${isPayer ? 'text-emerald-600' : 'text-ios-gray1'}">${isPayer ? '您已代墊' : (myShare > 0 ? `需出 NT$ ${Math.round(myShare)}` : '未參與')}</div>
+            </div>
+            <button type="button" onclick="deleteExpenseItem('${exp.id}')" class="ml-2 text-slate-300 hover:text-ios-red p-1 cursor-pointer"><i class="fa-regular fa-trash-can text-xs"></i></button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSettlement() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      const net = {};
+      (trip.members || []).forEach(m => net[m] = 0);
+      (trip.expenses || []).forEach(e => {
+        net[e.payer] = (net[e.payer] || 0) + (e.amountTWD || 0);
+        if (e.shares) Object.entries(e.shares).forEach(([m, s]) => net[m] = (net[m] || 0) - s);
+      });
+
+      document.getElementById('settlement-balances-container').innerHTML = Object.entries(net).map(([m, bal]) => `
+        <div class="flex justify-between p-2.5 rounded-xl bg-[#F2F2F7] text-xs">
+          <span class="font-bold">${m} ${m === currentUserName ? '(我)' : ''}</span>
+          <span class="font-bold ${bal === 0 ? 'text-ios-gray1' : (bal > 0 ? 'text-emerald-600' : 'text-ios-red')}">
+            ${bal === 0 ? '結清' : (bal > 0 ? `+ NT$ ${Math.round(bal).toLocaleString()}` : `- NT$ ${Math.abs(Math.round(bal)).toLocaleString()}`)}
+          </span>
+        </div>
+      `).join('');
+
+      const debtors = [], creditors = [];
+      Object.entries(net).forEach(([m, b]) => {
+        if (Math.round(b) <= -1) debtors.push({ name: m, amount: Math.abs(b) });
+        else if (Math.round(b) >= 1) creditors.push({ name: m, amount: b });
+      });
+
+      debtors.sort((a, b) => b.amount - a.amount);
+      creditors.sort((a, b) => b.amount - a.amount);
+
+      const transfers = [];
+      let d = 0, c = 0;
+      while (d < debtors.length && c < creditors.length) {
+        const debtor = debtors[d];
+        const creditor = creditors[c];
+        const amount = Math.min(debtor.amount, creditor.amount);
+
+        if (amount > 0) transfers.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
+
+        debtor.amount -= amount;
+        creditor.amount -= amount;
+
+        if (debtor.amount < 1) d++;
+        if (creditor.amount < 1) c++;
+      }
+
+      const transferContainer = document.getElementById('settlement-transfers-container');
+      if (transfers.length === 0) {
+        transferContainer.innerHTML = `<div class="text-center text-ios-gray1 text-xs py-2">目前沒有需要轉帳的款項</div>`;
+      } else {
+        transferContainer.innerHTML = transfers.map(t => `
+          <div class="flex items-center justify-between p-2 bg-[#F2F2F7] rounded-xl text-xs mb-1">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-700">${t.from}</span>
+              <i class="fa-solid fa-arrow-right-long text-ios-gray2"></i>
+              <span class="font-bold text-slate-700">${t.to}</span>
+            </div>
+            <div class="font-black text-ios-blue">NT$ ${t.amount.toLocaleString()}</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderPersonalOverview() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      document.getElementById('my-avatar-initial').textContent = currentUserName.charAt(0);
+      document.getElementById('my-overview-name').textContent = currentUserName;
+
+      let paid = 0, share = 0;
+      (trip.expenses || []).forEach(e => {
+        if (e.payer === currentUserName) paid += (e.amountTWD || 0);
+        if (e.shares && e.shares[currentUserName]) share += e.shares[currentUserName];
+      });
+      const net = paid - share;
+
+      document.getElementById('my-stat-paid').textContent = `NT$ ${Math.round(paid).toLocaleString()}`;
+      document.getElementById('my-stat-share').textContent = `NT$ ${Math.round(share).toLocaleString()}`;
+      const netEl = document.getElementById('my-stat-net');
+      netEl.textContent = net === 0 ? 'NT$ 0' : (net > 0 ? `+ NT$ ${Math.round(net).toLocaleString()}` : `- NT$ ${Math.abs(Math.round(net)).toLocaleString()}`);
+      netEl.className = `text-xs font-bold mt-0.5 ${net === 0 ? 'text-slate-900' : (net > 0 ? 'text-emerald-600' : 'text-ios-red')}`;
+
+      const actionsContainer = document.getElementById('my-actions-container');
+      if (net === 0) {
+        actionsContainer.innerHTML = `<div class="text-center text-ios-gray1 py-2">您目前沒有欠款，也無人欠您。</div>`;
+      } else if (net > 0) {
+        actionsContainer.innerHTML = `<div class="p-3 bg-emerald-50 text-emerald-700 rounded-xl">您已多付 NT$ ${Math.round(net).toLocaleString()}，請等待結算時向大家收款。</div>`;
+      } else {
+        actionsContainer.innerHTML = `<div class="p-3 bg-red-50 text-red-700 rounded-xl">您尚欠 NT$ ${Math.abs(Math.round(net)).toLocaleString()}，請在結算時依轉帳方案付款。</div>`;
+      }
+    }
+
+    function getCurrentTrip() { return trips.find(t => t.id === currentTripId); }
+    function generateId() { return Math.random().toString(36).substring(2, 9); }
+    
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-800/90 text-white px-4 py-2 rounded-full text-xs font-medium shadow-lg backdrop-blur flex items-center gap-2 transform transition-all duration-300 translate-y-[-20px] opacity-0';
+      toast.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.classList.remove('translate-y-[-20px]', 'opacity-0'); }, 10);
+      setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 2500);
+    }
+
+    function switchMainTab(tab) {
+      ['expenses', 'settle', 'overview'].forEach(t => {
+        document.getElementById(`tab-${t}-view`).classList.add('hidden');
+        document.getElementById(`nav-tab-${t}`).classList.remove('text-ios-blue');
+        document.getElementById(`nav-tab-${t}`).classList.add('text-ios-gray1');
+      });
+      document.getElementById(`tab-${tab}-view`).classList.remove('hidden');
+      document.getElementById(`nav-tab-${tab}`).classList.remove('text-ios-gray1');
+      document.getElementById(`nav-tab-${tab}`).classList.add('text-ios-blue');
+    }
+
+    function setExpenseFilter(mode) {
+      expenseFilterMode = mode;
+      document.getElementById('filter-btn-all').className = mode === 'all' ? 'px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue' : 'px-3 py-1 rounded-lg text-slate-500';
+      document.getElementById('filter-btn-mine').className = mode === 'mine' ? 'px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue' : 'px-3 py-1 rounded-lg text-slate-500';
+      renderExpensesList();
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    
+    function returnToPortal() { openModal('welcome-portal'); }
+
+    function handlePortalChoice(choice) {
+      closeModal('welcome-portal');
+      if (choice === 'create') openModal('modal-create-trip');
+      else if (choice === 'my') openSwitchIdentityModal();
+      else if (choice === 'join_code') openModal('modal-manual-join');
+    }
+
+    function openTripQRModal() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      document.getElementById('qr-modal-trip-sub').textContent = trip.title;
+      document.getElementById('qr-code-text-display').textContent = trip.code;
+      document.getElementById('qrcode-box').innerHTML = '';
+      
+      let joinUrl = window.location.origin + window.location.pathname + '?joinTrip=' + trip.code;
+      if (window.location.hostname.includes('googleusercontent.com')) {
+        document.getElementById('sandbox-warning-box').classList.remove('hidden');
+      } else {
+        document.getElementById('sandbox-warning-box').classList.add('hidden');
+      }
+
+      new QRCode(document.getElementById("qrcode-box"), { text: joinUrl, width: 160, height: 160, colorDark : "#1C1C1E", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+      openModal('modal-trip-qr');
+    }
+
+    function copyTripCodeOnly() {
+      const code = getCurrentTrip().code;
+      copyToClipboard(code);
+      showToast(`已複製邀請代碼: ${code}`);
+    }
+
+    function copyTripInviteLink() {
+      const trip = getCurrentTrip();
+      const joinUrl = window.location.origin + window.location.pathname + '?joinTrip=' + trip.code;
+      const msg = `✈️ 旅帳通邀請您加入【${trip.title}】共同分帳！\n點擊連結加入：${joinUrl}\n或在 App 輸入代碼：${trip.code}`;
+      copyToClipboard(msg);
+      showToast('邀請訊息已複製！');
+    }
+
+    function handleManualJoinCode(code) {
+      if (!code) return;
+      code = code.toUpperCase();
+      let trip = trips.find(t => t.code === code);
+      if (trip) {
+        promptJoinTrip(trip);
+      } else {
+        fetchFromCloud(code).then(cloudTrip => {
+          if (cloudTrip) promptJoinTrip(cloudTrip);
+          else showToast('找不到此代碼的任務！');
+        });
+      }
+    }
+
+    function handleManualJoinSubmit(e) {
+      e.preventDefault();
+      const code = document.getElementById('manual-trip-code').value.trim();
+      const myName = document.getElementById('manual-join-name').value.trim();
+      if(!code || !myName) return;
+      
+      localStorage.setItem('tripsplit_current_user', myName);
+      currentUserName = myName;
+      
+      handleManualJoinCode(code);
+    }
+
+    function promptJoinTrip(trip) {
+      closeModal('modal-manual-join');
+      document.getElementById('join-target-title').textContent = trip.title;
+      document.getElementById('join-target-code').textContent = trip.code;
+      if (currentUserName) document.getElementById('join-my-name-input').value = currentUserName;
+      openModal('modal-join-trip');
+    }
+
+    function executeJoinTripAction(e) {
+      e.preventDefault();
+      const myName = document.getElementById('join-my-name-input').value.trim();
+      const code = document.getElementById('join-target-code').textContent;
+      
+      let trip = trips.find(t => t.code === code);
+      if(!trip) {
+        fetchFromCloud(code).then(cloudTrip => {
+          if(cloudTrip) completeJoin(cloudTrip, myName);
+        });
+      } else {
+        completeJoin(trip, myName);
+      }
+    }
+    
+    function completeJoin(trip, myName) {
+      if (!trip.members.includes(myName)) {
+        trip.members.push(myName);
+      }
+      if (!trips.find(t => t.id === trip.id)) trips.push(trip);
+      
+      currentUserName = myName;
+      currentTripId = trip.id;
+      localStorage.setItem('tripsplit_current_user', myName);
+      
+      saveLocalTrips();
+      syncToCloud(true);
+      closeModal('modal-join-trip');
+      renderApp();
+      showToast(`已成功加入 ${trip.title}！`);
+    }
+
+    function openCameraScannerModal() {
+      openModal('modal-camera-scanner');
+      html5QrScannerInstance = new Html5Qrcode("camera-scanner-view");
+      html5QrScannerInstance.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 200, height: 200 } },
+        (decodedText) => {
+          closeCameraScannerModal();
+          let code = decodedText;
+          if (decodedText.includes('joinTrip=')) {
+            code = new URL(decodedText).searchParams.get('joinTrip');
+          }
+          if (code) {
+            document.getElementById('manual-trip-code').value = code;
+            handleManualJoinCode(code);
+          }
+        },
+        (errorMessage) => { /* scanning */ }
+      ).catch(err => {
+        showToast('無法啟動相機，請確認權限');
+        closeCameraScannerModal();
+      });
+    }
+
+    function closeCameraScannerModal() {
+      if (html5QrScannerInstance) {
+        html5QrScannerInstance.stop().then(() => { html5QrScannerInstance.clear(); }).catch(()=>{});
+        html5QrScannerInstance = null;
+      }
+      closeModal('modal-camera-scanner');
+    }
+
+    function handleCreateTripSubmit(e) {
+      e.preventDefault();
+      const title = document.getElementById('new-trip-title').value.trim();
+      const host = document.getElementById('new-trip-host').value.trim();
+      let memStr = document.getElementById('new-trip-members').value.trim();
+      let members = [host];
+      if (memStr) {
+        memStr.split(',').forEach(m => {
+          let name = m.trim();
+          if (name && !members.includes(name)) members.push(name);
+        });
+      }
+
+      const newTrip = {
+        id: 'trip_' + generateId(),
+        code: 'TRIP-' + Math.floor(1000 + Math.random() * 9000),
+        title, host, members,
+        createdAt: new Date().toISOString(),
+        expenses: []
+      };
+
+      trips.push(newTrip);
+      currentTripId = newTrip.id;
+      currentUserName = host;
+      localStorage.setItem('tripsplit_current_user', host);
+      
+      saveLocalTrips();
+      syncToCloud(true);
+      closeModal('modal-create-trip');
+      renderApp();
+      showToast('任務建立成功！');
+    }
+
+    function openManageTripsModal() {
+      const list = document.getElementById('manage-trips-list');
+      if (trips.length === 0) {
+        list.innerHTML = `<div class="text-center text-ios-gray1 text-xs py-4">目前沒有任何行程</div>`;
+      } else {
+        list.innerHTML = trips.map(t => `
+          <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 ${t.id === currentTripId ? 'bg-blue-50 border-blue-200' : 'bg-white'}">
+            <div class="flex-1 cursor-pointer" onclick="switchTrip('${t.id}')">
+              <div class="font-bold text-sm text-slate-900">${t.title}</div>
+              <div class="text-[10px] text-ios-gray1 mt-0.5">${t.code} • ${t.members.length} 人</div>
+            </div>
+            ${t.id === currentTripId ? `<i class="fa-solid fa-circle-check text-ios-blue mx-2"></i>` : ''}
+            <button type="button" onclick="requestDeleteSpecificTrip('${t.id}')" class="p-2 text-slate-300 hover:text-ios-red"><i class="fa-regular fa-trash-can"></i></button>
+          </div>
+        `).join('');
+      }
+      openModal('modal-manage-trips');
+    }
+
+    function switchTrip(id) {
+      currentTripId = id;
+      closeModal('modal-manage-trips');
+      renderApp();
+    }
+
+    function requestDeleteCurrentTrip() { requestDeleteSpecificTrip(currentTripId); }
+    
+    function requestDeleteSpecificTrip(id) {
+      pendingDeleteTripId = id;
+      const t = trips.find(x => x.id === id);
+      document.getElementById('delete-trip-warning-text').textContent = `您確定要刪除「${t?.title || ''}」嗎？所有資料將無法恢復。`;
+      openModal('modal-delete-trip');
+    }
+
+    function confirmDeleteTripAction() {
+      if (!pendingDeleteTripId) return;
+      deletedTripIds.push(pendingDeleteTripId);
+      saveDeletedTripIds();
+      trips = trips.filter(t => t.id !== pendingDeleteTripId);
+      saveLocalTrips();
+      
+      if (currentTripId === pendingDeleteTripId) {
+        currentTripId = trips.length > 0 ? trips[0].id : null;
+      }
+      pendingDeleteTripId = null;
+      closeModal('modal-delete-trip');
+      if(document.getElementById('modal-manage-trips').classList.contains('hidden') === false) {
+        openManageTripsModal();
+      }
+      if(currentTripId) renderApp(); else openModal('welcome-portal');
+      showToast('行程已刪除');
+    }
+
+    function openAddExpenseModal() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      document.getElementById('expense-form').reset();
+      
+      const now = new Date();
+      document.getElementById('expense-date').value = now.toISOString().substring(0, 10);
+      document.getElementById('expense-time').value = now.toTimeString().substring(0, 5);
+      
+      const payerSelect = document.getElementById('expense-payer');
+      payerSelect.innerHTML = trip.members.map(m => `<option value="${m}" ${m === currentUserName ? 'selected' : ''}>${m}</option>`).join('');
+      
+      setSplitMode('equal');
+      openModal('modal-add-expense');
+    }
+    function closeExpenseModal() { closeModal('modal-add-expense'); }
+
+    function setSplitMode(mode) {
+      currentSplitMode = mode;
+      ['equal', 'custom_amount', 'percent'].forEach(m => {
+        const btn = document.getElementById(`btn-split-${m === 'custom_amount' ? 'custom' : m}`);
+        btn.className = m === mode ? 'py-1.5 rounded-lg bg-white shadow-xs text-ios-blue' : 'py-1.5 rounded-lg text-slate-500';
+      });
+      renderSplitParticipants();
+    }
+
+    function renderSplitParticipants() {
+      const trip = getCurrentTrip();
+      const container = document.getElementById('split-participants-container');
+      container.innerHTML = trip.members.map(m => `
+        <div class="flex items-center justify-between bg-white px-2 py-1.5 rounded-lg border border-slate-100">
+          <label class="flex items-center gap-2 cursor-pointer flex-1">
+            <input type="checkbox" class="w-3.5 h-3.5 text-ios-blue rounded border-gray-300 split-cb" value="${m}" checked onchange="handleSplitChange()">
+            <span class="text-xs font-semibold text-slate-700">${m}</span>
+          </label>
+          ${currentSplitMode === 'custom_amount' ? `<input type="number" step="any" placeholder="金額" class="w-16 px-1.5 py-1 text-right bg-[#F2F2F7] rounded text-xs outline-none split-val" data-member="${m}" oninput="handleSplitChange()">` : ''}
+          ${currentSplitMode === 'percent' ? `<input type="number" step="any" placeholder="%" class="w-12 px-1.5 py-1 text-right bg-[#F2F2F7] rounded text-xs outline-none split-val" data-member="${m}" value="${(100/trip.members.length).toFixed(1)}" oninput="handleSplitChange()">` : ''}
+        </div>
+      `).join('');
+    }
+
+    function handleCurrencyChange() {
+      const cur = document.getElementById('expense-currency').value;
+      document.getElementById('expense-exchange-rate').value = DEFAULT_RATES[cur] || 1.0;
+      calculateExchangePreview();
+    }
+
+    function calculateExchangePreview() {
+      const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+      const rate = parseFloat(document.getElementById('expense-exchange-rate').value) || 1.0;
+      document.getElementById('expense-twd-preview').textContent = `NT$ ${Math.round(amount * rate)}`;
+    }
+
+    function handleSplitChange() {}
+
+    function submitExpenseForm() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      
+      const item = document.getElementById('expense-item-name').value.trim();
+      const amount = parseFloat(document.getElementById('expense-amount').value);
+      if(!item || !amount) { showToast('請填寫名稱與金額'); return; }
+      
+      const rate = parseFloat(document.getElementById('expense-exchange-rate').value) || 1.0;
+      const amountTWD = amount * rate;
+      
+      const shares = {};
+      const cbs = document.querySelectorAll('.split-cb:checked');
+      if (cbs.length === 0) { showToast('至少需選擇一名分攤者'); return; }
+      
+      let participants = Array.from(cbs).map(cb => cb.value);
+      
+      if (currentSplitMode === 'equal') {
+        const perPerson = amountTWD / participants.length;
+        participants.forEach(m => shares[m] = perPerson);
+      } else if (currentSplitMode === 'custom_amount') {
+        let total = 0;
+        document.querySelectorAll('.split-val').forEach(inp => {
+          if (participants.includes(inp.dataset.member)) {
+            const v = (parseFloat(inp.value)||0) * rate;
+            shares[inp.dataset.member] = v;
+            total += v;
+          }
+        });
+        if (Math.abs(total - amountTWD) > 1) { showToast('分攤金額總和不等於總金額'); return; }
+      } else if (currentSplitMode === 'percent') {
+        let totalP = 0;
+        document.querySelectorAll('.split-val').forEach(inp => {
+          if (participants.includes(inp.dataset.member)) {
+            const p = parseFloat(inp.value)||0;
+            shares[inp.dataset.member] = amountTWD * (p/100);
+            totalP += p;
+          }
+        });
+        if (Math.abs(totalP - 100) > 0.1) { showToast('百分比總和需為 100%'); return; }
+      }
+
+      const exp = {
+        id: 'exp_' + generateId(),
+        item, category: document.getElementById('expense-category').value,
+        currency: document.getElementById('expense-currency').value,
+        originalAmount: amount, exchangeRate: rate, amountTWD,
+        date: document.getElementById('expense-date').value, time: document.getElementById('expense-time').value,
+        payer: document.getElementById('expense-payer').value,
+        splitMode: currentSplitMode, participants, shares
+      };
+
+      trip.expenses.push(exp);
+      saveLocalTrips();
+      syncToCloud(true);
+      closeExpenseModal();
+      renderApp();
+      showToast('消費已記錄');
+    }
+
+    function deleteExpenseItem(expId) {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      trip.expenses = trip.expenses.filter(e => e.id !== expId);
+      saveLocalTrips();
+      syncToCloud(true);
+      renderApp();
+      showToast('已刪除紀錄');
+    }
+
+    function openAddMemberModal() { openModal('modal-add-member'); }
+    function handleAddMemberSubmit(e) {
+      e.preventDefault();
+      const trip = getCurrentTrip();
+      const name = document.getElementById('new-member-name-input').value.trim();
+      if(name && !trip.members.includes(name)) {
+        trip.members.push(name);
+        saveLocalTrips();
+        syncToCloud(true);
+        renderApp();
+        closeModal('modal-add-member');
+        showToast('成員已加入');
+      } else {
+        showToast('成員名稱重複或無效');
+      }
+    }
+
+    function openSwitchIdentityModal() {
+      const trip = getCurrentTrip();
+      const picks = document.getElementById('identity-quick-picks');
+      if (trip && trip.members) {
+        picks.innerHTML = trip.members.map(m => `<button type="button" onclick="selectIdentity('${m}')" class="px-3 py-1.5 bg-blue-50 text-ios-blue rounded-lg text-xs font-bold">${m}</button>`).join('');
+      } else {
+        picks.innerHTML = '<span class="text-xs text-ios-gray1">請先建立或選擇任務</span>';
+      }
+      openModal('modal-identity');
+    }
+
+    function selectIdentity(name) {
+      currentUserName = name;
+      localStorage.setItem('tripsplit_current_user', name);
+      closeModal('modal-identity');
+      renderApp();
+      showToast(`已切換身分為：${name}`);
+    }
+
+    function confirmIdentityCustom() {
+      const name = document.getElementById('identity-custom-input').value.trim();
+      if(name) selectIdentity(name);
+    }
+
+    function copySettlementReport() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      let text = `✈️【${trip.title}】分帳結算報表\n代碼：${trip.code}\n--------------------\n`;
+      const net = {};
+      (trip.members || []).forEach(m => net[m] = 0);
+      (trip.expenses || []).forEach(e => {
+        net[e.payer] = (net[e.payer] || 0) + (e.amountTWD || 0);
+        if (e.shares) Object.entries(e.shares).forEach(([m, s]) => net[m] = (net[m] || 0) - s);
+      });
+      text += `【每人應收 / 應付淨額】\n`;
+      Object.entries(net).forEach(([m, bal]) => {
+        text += `${m}: ${bal >= 0 ? `+NT$ ${Math.round(bal)}` : `-NT$ ${Math.abs(Math.round(bal))}`}\n`;
+      });
+      copyToClipboard(text);
+      showToast('結算報表已複製到剪貼簿！');
+    }
+
+    function exportCSV() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      let csv = '\uFEFF品項,類別,幣別,原幣金額,匯率,台幣金額,代墊付款人,分攤人數,日期\n';
+      (trip.expenses || []).forEach(e => {
+        csv += `"${e.item}","${e.category}","${e.currency}",${e.originalAmount},${e.exchangeRate},${Math.round(e.amountTWD)},"${e.payer}",${(e.participants||[]).length},"${e.date}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${trip.title}_支出明細.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV 已下載！');
+    }
+
+    function copyToClipboard(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+
+    async function fetchFromCloud(code = null) {
+      if (!GAS_API_URL) return null;
+      try {
+        const url = code ? `${GAS_API_URL}?tripCode=${code}` : `${GAS_API_URL}?tripId=${currentTripId}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return data.success ? data.trip : null;
+      } catch(e) { return null; }
+    }
+
+    async function syncToCloud(forceUpdate = false) {
+      if (!GAS_API_URL || isGASBusy || !currentTripId) return;
+      isGASBusy = true;
+      const badge = document.getElementById('cloud-sync-badge');
+      const label = document.getElementById('cloud-sync-label');
+      
+      try {
+        if (forceUpdate) {
+          label.textContent = '同步中...';
+          const trip = getCurrentTrip();
+          if (trip) {
+            await fetch(GAS_API_URL, {
+              method: 'POST',
+              body: JSON.stringify({ trip }),
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            });
+          }
+        } else {
+          const cloudTrip = await fetchFromCloud();
+          if (cloudTrip && cloudTrip.id === currentTripId) {
+            const localTrip = getCurrentTrip();
+            if (!localTrip || (cloudTrip.expenses || []).length > (localTrip.expenses || []).length) {
+              const idx = trips.findIndex(t => t.id === cloudTrip.id);
+              if (idx > -1) trips[idx] = cloudTrip; else trips.push(cloudTrip);
+              saveLocalTrips();
+              renderApp();
+            }
+          }
+        }
+        label.textContent = '試算表已連線';
+        badge.className = 'ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
+      } catch(e) {
+        label.textContent = '離線暫存中';
+        badge.className = 'ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
+      } finally {
+        isGASBusy = false;
+      }
+    }
+  </script>
+</body>
+</html>
