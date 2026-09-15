@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="旅帳通" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#F2F2F7" />
+  <meta name="format-detection" content="telephone=no" />
   <title>旅帳通 TripSplit - 旅遊記帳與智慧分帳</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -52,22 +58,31 @@
   </script>
 
   <style>
+    :root {
+      --app-height: 100dvh;
+    }
+    html, body {
+      height: 100%;
+      height: var(--app-height);
+      overflow: hidden;
+      background-color: #E5E5EA;
+      touch-action: manipulation;
+    }
     body {
-      background-color: #F2F2F7;
       color: #1C1C1E;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
       -webkit-user-select: none;
       font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-      touch-action: manipulation;
     }
     input, textarea, select {
       user-select: auto;
       -webkit-user-select: auto;
       appearance: none;
+      font-size: 16px; /* 防止 iOS Safari 在點選輸入框時自動強制放大頁面 */
     }
-    .safe-top { padding-top: env(safe-area-inset-top, 12px); }
-    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+    .safe-top { padding-top: max(env(safe-area-inset-top, 0px), 10px); }
+    .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px); }
     .ios-blur {
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -89,14 +104,15 @@
   </style>
 </head>
 
-<body class="min-h-screen flex justify-center items-start text-slate-900 selection:bg-ios-blue selection:text-white pb-24">
+<body class="flex justify-center items-center text-slate-900 selection:bg-ios-blue selection:text-white">
 
-  <div class="w-full max-w-md min-h-screen bg-[#F2F2F7] relative flex flex-col shadow-2xl overflow-x-hidden">
+  <!-- Mobile App Frame: 在手機上自動滿版(100vw, 100dvh)，在電腦或平板上居中模擬 iPhone 比例 -->
+  <div class="w-full sm:max-w-md h-full sm:h-[94dvh] sm:rounded-[36px] bg-[#F2F2F7] relative flex flex-col shadow-2xl overflow-hidden sm:border sm:border-slate-300/60">
 
-    <!-- iOS TOP NAVIGATION BAR -->
-    <header class="sticky top-0 z-40 bg-white/80 ios-blur border-b border-ios-separator safe-top">
+    <!-- iOS TOP NAVIGATION BAR (Fixed) -->
+    <header class="shrink-0 z-30 bg-white/85 ios-blur border-b border-ios-separator safe-top">
       <div class="h-12 px-4 flex items-center justify-between">
-        <div onclick="returnToPortal()" class="flex items-center gap-2 cursor-pointer ios-press">
+        <div onclick="returnToPortal()" class="flex items-center gap-2 cursor-pointer ios-press py-1">
           <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-ios-blue to-cyan-500 flex items-center justify-center text-white text-xs shadow-sm font-black">
             <i class="fa-solid fa-plane-departure"></i>
           </div>
@@ -107,19 +123,20 @@
         </div>
 
         <div class="flex items-center gap-1.5">
-          <button type="button" onclick="syncToCloud(true)" id="cloud-sync-badge" class="ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer">
+          <button type="button" onclick="syncToCloud(true)" id="cloud-sync-badge" class="ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="cloud-sync-label">試算表同步</span>
           </button>
-          <button type="button" onclick="openSwitchIdentityModal()" class="ios-press px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1 cursor-pointer">
-            <i class="fa-regular fa-user text-ios-blue text-[10px]"></i>
+          <button type="button" onclick="openSwitchIdentityModal()" class="ios-press px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-regular fa-user text-ios-blue text-[11px]"></i>
             <span id="current-user-label">小明</span>
           </button>
         </div>
       </div>
     </header>
 
-    <main class="flex-1 p-3.5 space-y-3.5 pb-28">
+    <!-- MOBILE SCROLLABLE CONTENT AREA (獨立滾動，不破壞上下導航欄) -->
+    <main class="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-3.5 pb-24 no-scrollbar">
 
       <!-- TRIP HERO CARD -->
       <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 relative overflow-hidden">
@@ -139,24 +156,24 @@
           </div>
 
           <div class="flex items-center gap-1.5">
-            <button type="button" onclick="openTripQRModal()" class="w-9 h-9 rounded-xl bg-blue-50 hover:bg-blue-100 text-ios-blue flex items-center justify-center ios-press" title="出示邀請 QR Code">
-              <i class="fa-solid fa-qrcode text-sm"></i>
+            <button type="button" onclick="openTripQRModal()" class="w-10 h-10 rounded-xl bg-blue-50 hover:bg-blue-100 text-ios-blue flex items-center justify-center ios-press active:bg-blue-200" title="出示邀請 QR Code">
+              <i class="fa-solid fa-qrcode text-base"></i>
             </button>
-            <button type="button" onclick="openManageTripsModal()" class="w-9 h-9 rounded-xl bg-[#F2F2F7] hover:bg-slate-200 text-slate-700 flex items-center justify-center ios-press" title="切換或管理行程">
-              <i class="fa-solid fa-layer-group text-sm"></i>
+            <button type="button" onclick="openManageTripsModal()" class="w-10 h-10 rounded-xl bg-[#F2F2F7] hover:bg-slate-200 text-slate-700 flex items-center justify-center ios-press active:bg-slate-300" title="切換或管理行程">
+              <i class="fa-solid fa-layer-group text-base"></i>
             </button>
           </div>
         </div>
 
         <div class="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between">
           <div class="flex items-center -space-x-1.5 overflow-x-auto no-scrollbar py-0.5" id="trip-member-avatars"></div>
-          <div class="flex items-center gap-1.5">
-            <button type="button" onclick="openAddMemberModal()" class="ios-press text-[11px] font-bold text-ios-blue bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="openAddMemberModal()" class="ios-press min-h-[32px] text-xs font-bold text-ios-blue bg-blue-50 px-3 py-1 rounded-full flex items-center gap-1">
               <i class="fa-solid fa-user-plus text-[10px]"></i>
               <span>加人</span>
             </button>
-            <button type="button" onclick="requestDeleteCurrentTrip()" class="ios-press text-[11px] font-bold text-ios-red bg-red-50 px-2 py-1 rounded-full flex items-center gap-1" title="刪除任務">
-              <i class="fa-regular fa-trash-can text-[10px]"></i>
+            <button type="button" onclick="requestDeleteCurrentTrip()" class="ios-press min-h-[32px] text-xs font-bold text-ios-red bg-red-50 px-2.5 py-1 rounded-full flex items-center gap-1" title="刪除任務">
+              <i class="fa-regular fa-trash-can text-[11px]"></i>
             </button>
           </div>
         </div>
@@ -164,14 +181,14 @@
 
       <!-- TAB 1: EXPENSES LIST VIEW -->
       <section id="tab-expenses-view" class="space-y-3">
-        <div class="bg-white rounded-2xl p-3 shadow-sm border border-slate-100 flex items-center justify-between">
+        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
-            <div class="text-[10px] text-ios-gray1 font-medium">行程總支出 (折合 TWD)</div>
-            <div id="stat-total-expense" class="text-lg font-black text-slate-900 mt-0.5">NT$ 0</div>
+            <div class="text-[11px] text-ios-gray1 font-medium">行程總支出 (折合 TWD)</div>
+            <div id="stat-total-expense" class="text-xl font-black text-slate-900 mt-0.5">NT$ 0</div>
           </div>
-          <div class="flex bg-[#F2F2F7] p-0.5 rounded-xl text-xs font-semibold">
-            <button type="button" onclick="setExpenseFilter('all')" id="filter-btn-all" class="px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue">全部</button>
-            <button type="button" onclick="setExpenseFilter('mine')" id="filter-btn-mine" class="px-3 py-1 rounded-lg text-slate-500">只看我</button>
+          <div class="flex bg-[#F2F2F7] p-1 rounded-xl text-xs font-semibold">
+            <button type="button" onclick="setExpenseFilter('all')" id="filter-btn-all" class="px-3.5 py-1.5 rounded-lg bg-white shadow-xs text-ios-blue min-h-[30px]">全部</button>
+            <button type="button" onclick="setExpenseFilter('mine')" id="filter-btn-mine" class="px-3.5 py-1.5 rounded-lg text-slate-500 min-h-[30px]">只看我</button>
           </div>
         </div>
 
@@ -182,8 +199,8 @@
 
         <div id="expenses-container" class="space-y-2"></div>
 
-        <div class="pt-2">
-          <button type="button" onclick="openAddExpenseModal()" class="w-full py-3.5 rounded-2xl bg-ios-blue text-white font-bold text-sm shadow-md hover:bg-blue-600 transition flex items-center justify-center gap-2 ios-press">
+        <div class="pt-1">
+          <button type="button" onclick="openAddExpenseModal()" class="w-full py-3.5 rounded-2xl bg-ios-blue text-white font-bold text-sm shadow-md hover:bg-blue-600 transition flex items-center justify-center gap-2 ios-press min-h-[48px]">
             <i class="fa-solid fa-plus text-xs"></i>
             <span>記一筆消費</span>
           </button>
@@ -194,10 +211,10 @@
       <section id="tab-settle-view" class="hidden space-y-3">
         <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-4 shadow-md">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full">最小轉帳演算法</span>
-            <button type="button" onclick="copySettlementReport()" class="text-xs font-bold bg-white text-ios-blue px-3 py-1 rounded-full ios-press flex items-center gap-1 shadow-sm">
-              <i class="fa-regular fa-copy"></i>
-              <span>複製報表</span>
+            <span class="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-full">最小轉帳演算法</span>
+            <button type="button" onclick="shareSettlementReport()" class="text-xs font-bold bg-white text-ios-blue px-3.5 py-1.5 rounded-full ios-press flex items-center gap-1.5 shadow-sm min-h-[32px]">
+              <i class="fa-solid fa-arrow-up-from-bracket text-[11px]"></i>
+              <span>分享 / 複製報表</span>
             </button>
           </div>
           <div class="mt-3 text-xs text-blue-100">演算法已自動抵消多角借貸，將所有人的債務化簡為最少筆直接轉帳。</div>
@@ -219,8 +236,8 @@
           <div id="settlement-balances-container" class="space-y-2"></div>
         </div>
 
-        <button type="button" onclick="exportCSV()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition ios-press">
-          <i class="fa-solid fa-file-csv text-emerald-600"></i>
+        <button type="button" onclick="exportCSV()" class="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition ios-press min-h-[44px]">
+          <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
           <span>匯出 CSV 試算表</span>
         </button>
       </section>
@@ -256,22 +273,20 @@
 
     </main>
 
-    <!-- iOS BOTTOM TAB BAR -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none">
-      <div class="w-full max-w-md bg-white/90 ios-blur border-t border-ios-separator safe-bottom pointer-events-auto px-4 py-1.5 flex items-center justify-around text-[10px] font-medium text-ios-gray1 shadow-lg">
-        <button type="button" onclick="switchMainTab('expenses')" id="nav-tab-expenses" class="flex-1 py-1 flex flex-col items-center gap-0.5 text-ios-blue transition ios-press">
-          <i class="fa-solid fa-receipt text-lg"></i>
-          <span>消費明細</span>
-        </button>
-        <button type="button" onclick="switchMainTab('settle')" id="nav-tab-settle" class="flex-1 py-1 flex flex-col items-center gap-0.5 transition ios-press">
-          <i class="fa-solid fa-calculator text-lg"></i>
-          <span>智慧結算</span>
-        </button>
-        <button type="button" onclick="switchMainTab('overview')" id="nav-tab-overview" class="flex-1 py-1 flex flex-col items-center gap-0.5 transition ios-press">
-          <i class="fa-regular fa-circle-user text-lg"></i>
-          <span>個人儀表</span>
-        </button>
-      </div>
+    <!-- iOS BOTTOM TAB BAR (Fixed inside mobile container) -->
+    <nav class="shrink-0 z-30 bg-white/95 ios-blur border-t border-ios-separator safe-bottom px-2 py-1.5 flex items-center justify-around text-[10px] font-medium text-ios-gray1 shadow-lg">
+      <button type="button" onclick="switchMainTab('expenses')" id="nav-tab-expenses" class="flex-1 py-1.5 flex flex-col items-center gap-0.5 text-ios-blue transition ios-press min-h-[44px]">
+        <i class="fa-solid fa-receipt text-lg"></i>
+        <span>消費明細</span>
+      </button>
+      <button type="button" onclick="switchMainTab('settle')" id="nav-tab-settle" class="flex-1 py-1.5 flex flex-col items-center gap-0.5 transition ios-press min-h-[44px]">
+        <i class="fa-solid fa-calculator text-lg"></i>
+        <span>智慧結算</span>
+      </button>
+      <button type="button" onclick="switchMainTab('overview')" id="nav-tab-overview" class="flex-1 py-1.5 flex flex-col items-center gap-0.5 transition ios-press min-h-[44px]">
+        <i class="fa-regular fa-circle-user text-lg"></i>
+        <span>個人儀表</span>
+      </button>
     </nav>
 
     <!-- WELCOME PORTAL -->
@@ -389,11 +404,11 @@
             </div>
             <div class="col-span-2">
               <label class="block font-semibold text-slate-700 mb-1">原始金額 *</label>
-              <input type="number" step="any" id="expense-amount" required placeholder="0" oninput="calculateExchangePreview()" class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
+              <input type="number" inputmode="decimal" step="any" id="expense-amount" required placeholder="0" oninput="calculateExchangePreview()" class="w-full px-3 py-2 bg-[#F2F2F7] rounded-xl font-bold text-sm outline-none" />
             </div>
           </div>
           <div class="flex items-center justify-between p-2.5 bg-blue-50/70 rounded-xl text-[11px] text-slate-700">
-            <div>匯率：<input type="number" step="0.0001" id="expense-exchange-rate" value="1.0000" oninput="calculateExchangePreview()" class="w-16 px-1.5 py-0.5 bg-white rounded border border-blue-200 text-center font-semibold text-[11px]" /></div>
+            <div>匯率：<input type="number" inputmode="decimal" step="0.0001" id="expense-exchange-rate" value="1.0000" oninput="calculateExchangePreview()" class="w-16 px-1.5 py-0.5 bg-white rounded border border-blue-200 text-center font-semibold text-[11px]" /></div>
             <div>折合：<strong id="expense-twd-preview" class="text-ios-blue font-bold">NT$ 0</strong></div>
           </div>
           <div class="grid grid-cols-2 gap-2">
@@ -822,21 +837,48 @@
       const trip = getCurrentTrip();
       const joinUrl = window.location.origin + window.location.pathname + '?joinTrip=' + trip.code;
       const msg = `✈️ 旅帳通邀請您加入【${trip.title}】共同分帳！\n點擊連結加入：${joinUrl}\n或在 App 輸入代碼：${trip.code}`;
-      copyToClipboard(msg);
-      showToast('邀請訊息已複製！');
+      
+      if (navigator.share) {
+        navigator.share({
+          title: `旅帳通邀請 - ${trip.title}`,
+          text: msg,
+          url: joinUrl,
+        }).catch(() => {
+          copyToClipboard(msg);
+          showToast('邀請訊息已複製！');
+        });
+      } else {
+        copyToClipboard(msg);
+        showToast('邀請訊息已複製！');
+      }
     }
 
-    function handleManualJoinCode(code) {
-      if (!code) return;
-      code = code.toUpperCase();
-      let trip = trips.find(t => t.code === code);
-      if (trip) {
-        promptJoinTrip(trip);
-      } else {
-        fetchFromCloud(code).then(cloudTrip => {
-          if (cloudTrip) promptJoinTrip(cloudTrip);
-          else showToast('找不到此代碼的任務！');
+    function shareSettlementReport() {
+      const trip = getCurrentTrip();
+      if(!trip) return;
+      let text = `✈️【${trip.title}】分帳結算報表\n代碼：${trip.code}\n--------------------\n`;
+      const net = {};
+      (trip.members || []).forEach(m => net[m] = 0);
+      (trip.expenses || []).forEach(e => {
+        net[e.payer] = (net[e.payer] || 0) + (e.amountTWD || 0);
+        if (e.shares) Object.entries(e.shares).forEach(([m, s]) => net[m] = (net[m] || 0) - s);
+      });
+      text += `【每人應收 / 應付淨額】\n`;
+      Object.entries(net).forEach(([m, bal]) => {
+        text += `${m}: ${bal >= 0 ? `+NT$ ${Math.round(bal)}` : `-NT$ ${Math.abs(Math.round(bal))}`}\n`;
+      });
+
+      if (navigator.share) {
+        navigator.share({
+          title: `【${trip.title}】分帳結算報表`,
+          text: text,
+        }).catch(() => {
+          copyToClipboard(text);
+          showToast('結算報表已複製到剪貼簿！');
         });
+      } else {
+        copyToClipboard(text);
+        showToast('結算報表已複製到剪貼簿！');
       }
     }
 
