@@ -592,16 +592,31 @@
     let pendingDeleteTripId = null;
     let html5QrScannerInstance = null;
     let isGASBusy = false;
+    let tempEditingMembers = [];
 
     window.onload = async function() {
+      const loader = document.getElementById('app-launch-loader');
+      const loaderText = document.getElementById('launch-loading-text');
+
       const urlParams = new URLSearchParams(window.location.search);
       const joinCode = urlParams.get('joinTrip');
       
       const label = document.getElementById('cloud-sync-label');
       if (label) label.textContent = '讀取雲端資料庫...';
+      if (loaderText) loaderText.textContent = '正在同步 Google 試算表資料庫...';
 
-      // 優先從 Google 試算表雲端獲取真實資料
-      await fetchAllFromCloud(false);
+      try {
+        // 優先從 Google 試算表雲端獲取真實資料
+        await fetchAllFromCloud(false);
+      } catch (err) {
+        console.warn("啟動載入雲端完成或降級:", err);
+      } finally {
+        // 連線讀取完成後隱藏載入遮罩，平滑淡出開始使用
+        if (loader) {
+          loader.classList.add('opacity-0', 'pointer-events-none');
+          setTimeout(() => { loader.remove(); }, 350);
+        }
+      }
 
       if (joinCode) {
         document.getElementById('manual-trip-code').value = joinCode;
@@ -1269,6 +1284,116 @@
       } else {
         showToast('成員名稱重複或無效');
       }
+    }
+
+    /* 任務名稱與成員管理模組 */
+    function openEditTripModal() {
+      const trip = getCurrentTrip();
+      if (!trip) return;
+      document.getElementById('edit-trip-title-input').value = trip.title || '';
+      document.getElementById('edit-trip-new-member-input').value = '';
+      tempEditingMembers = [...(trip.members || [])];
+      renderEditTripMembersList();
+      openModal('modal-edit-trip');
+    }
+
+    function renderEditTripMembersList() {
+      const container = document.getElementById('edit-trip-members-list');
+      if (!container) return;
+      if (tempEditingMembers.length === 0) {
+        container.innerHTML = `<div class="text-center text-ios-gray1 py-2">目前沒有任何成員</div>`;
+        return;
+      }
+      container.innerHTML = tempEditingMembers.map((m, idx) => `
+        <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-xl border border-slate-100 gap-2">
+          <div class="w-6 h-6 rounded-full bg-blue-50 text-ios-blue font-bold flex items-center justify-center text-xs shrink-0">${m.charAt(0)}</div>
+          <input type="text" value="${m}" onchange="updateTempMemberName(${idx}, this.value)" class="flex-1 bg-transparent text-xs font-bold text-slate-800 outline-none focus:text-ios-blue" placeholder="成員名稱" />
+          <button type="button" onclick="removeMemberInEditModal(${idx})" class="p-1.5 text-slate-300 hover:text-ios-red ios-press" title="移除成員">
+            <i class="fa-regular fa-trash-can text-xs"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function updateTempMemberName(idx, newName) {
+      newName = newName.trim();
+      if (!newName) return;
+      tempEditingMembers[idx] = newName;
+    }
+
+    function addMemberInEditModal() {
+      const input = document.getElementById('edit-trip-new-member-input');
+      const name = input.value.trim();
+      if (!name) { showToast('請輸入成員稱呼'); return; }
+      if (tempEditingMembers.includes(name)) { showToast('該成員名稱已存在'); return; }
+      tempEditingMembers.push(name);
+      input.value = '';
+      renderEditTripMembersList();
+    }
+
+    function removeMemberInEditModal(idx) {
+      if (tempEditingMembers.length <= 1) {
+        showToast('任務至少需保留一位成員');
+        return;
+      }
+      const memberToRemove = tempEditingMembers[idx];
+      const trip = getCurrentTrip();
+      const hasExpenses = (trip?.expenses || []).some(e => e.payer === memberToRemove || (e.participants || []).includes(memberToRemove));
+      if (hasExpenses) {
+        showToast(`注意：${memberToRemove} 已有記帳紀錄，移除後請至明細確認`);
+      }
+      tempEditingMembers.splice(idx, 1);
+      renderEditTripMembersList();
+    }
+
+    function saveEditTripSubmit() {
+      const trip = getCurrentTrip();
+      if (!trip) return;
+      const newTitle = document.getElementById('edit-trip-title-input').value.trim();
+      if (!newTitle) { showToast('請填寫任務名稱'); return; }
+      
+      const cleanMembers = tempEditingMembers.map(m => m.trim()).filter(m => m);
+      if (cleanMembers.length === 0) { showToast('至少需有一位成員'); return; }
+
+      // 檢查是否有成員更名，智慧連動舊有記帳項目
+      const oldMembers = trip.members || [];
+      const renameMap = {};
+      oldMembers.forEach((oldM, i) => {
+        if (cleanMembers[i] && cleanMembers[i] !== oldM) {
+          renameMap[oldM] = cleanMembers[i];
+        }
+      });
+
+      if (Object.keys(renameMap).length > 0) {
+        (trip.expenses || []).forEach(exp => {
+          if (renameMap[exp.payer]) exp.payer = renameMap[exp.payer];
+          exp.participants = (exp.participants || []).map(p => renameMap[p] || p);
+          if (exp.shares) {
+            const newShares = {};
+            Object.entries(exp.shares).forEach(([p, val]) => {
+              newShares[renameMap[p] || p] = val;
+            });
+            exp.shares = newShares;
+          }
+        });
+        if (renameMap[currentUserName]) {
+          currentUserName = renameMap[currentUserName];
+          localStorage.setItem('tripsplit_current_user', currentUserName);
+        }
+      }
+
+      trip.title = newTitle;
+      trip.members = cleanMembers;
+      if (!trip.members.includes(trip.host) && trip.members.length > 0) {
+        trip.host = trip.members[0];
+      }
+      trip.updatedAt = Date.now();
+
+      saveLocalTrips();
+      syncTripToCloud(trip, 'saveTrip');
+      closeModal('modal-edit-trip');
+      renderApp();
+      showToast('任務名稱與成員已更新並同步！');
     }
 
     function openSwitchIdentityModal() {
