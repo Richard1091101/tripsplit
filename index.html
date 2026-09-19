@@ -123,13 +123,13 @@
         </div>
 
         <div class="flex items-center gap-1.5">
-          <button type="button" onclick="syncToCloud(true)" id="cloud-sync-badge" class="ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer">
+          <button type="button" onclick="fetchAllFromCloud(true)" id="cloud-sync-badge" class="ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="cloud-sync-label">試算表同步</span>
           </button>
           <button type="button" onclick="openSwitchIdentityModal()" class="ios-press px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center gap-1.5 cursor-pointer">
             <i class="fa-regular fa-user text-ios-blue text-[11px]"></i>
-            <span id="current-user-label">小明</span>
+            <span id="current-user-label">未設定</span>
           </button>
         </div>
       </div>
@@ -143,15 +143,15 @@
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1">
             <div class="flex items-center gap-1.5 mb-0.5">
-              <span id="trip-badge-code" class="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-blue-50 text-ios-blue rounded border border-blue-100">TRIP-2026</span>
+              <span id="trip-badge-code" class="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-blue-50 text-ios-blue rounded border border-blue-100">TRIP-NEW</span>
               <span id="trip-status-badge" class="text-[10px] font-semibold px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">記帳中</span>
             </div>
-            <h2 id="trip-title-display" class="text-lg font-bold text-slate-900 leading-tight">東京五日賞櫻團</h2>
+            <h2 id="trip-title-display" class="text-lg font-bold text-slate-900 leading-tight">請建立或載入任務</h2>
             <p class="text-xs text-ios-gray1 mt-1 flex items-center gap-1">
               <i class="fa-regular fa-circle-user text-[10px]"></i>
-              主揪：<span id="trip-host-display" class="font-medium text-slate-700">小明</span>
+              主揪：<span id="trip-host-display" class="font-medium text-slate-700">無</span>
               <span class="mx-1">•</span>
-              <span id="trip-members-count">4</span> 位成員
+              <span id="trip-members-count">0</span> 位成員
             </p>
           </div>
 
@@ -245,8 +245,8 @@
       <!-- TAB 3: PERSONAL OVERVIEW DASHBOARD -->
       <section id="tab-overview-view" class="hidden space-y-3">
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 text-center">
-          <div class="w-14 h-14 rounded-full bg-blue-50 text-ios-blue flex items-center justify-center text-xl font-bold mx-auto mb-2 border border-blue-100" id="my-avatar-initial">明</div>
-          <h3 class="text-base font-bold text-slate-900" id="my-overview-name">小明</h3>
+          <div class="w-14 h-14 rounded-full bg-blue-50 text-ios-blue flex items-center justify-center text-xl font-bold mx-auto mb-2 border border-blue-100" id="my-avatar-initial">我</div>
+          <h3 class="text-base font-bold text-slate-900" id="my-overview-name">尚未設定身分</h3>
           <p class="text-xs text-ios-gray1 mt-0.5">專屬收支即時計算儀表</p>
 
           <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-left">
@@ -327,7 +327,7 @@
         <div id="qrcode-box" class="flex justify-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm mx-auto w-fit"></div>
         <div class="text-sm font-mono font-bold text-ios-blue bg-blue-50 py-2 rounded-xl cursor-pointer" onclick="copyTripCodeOnly()" id="qr-code-text-display" title="點擊直接複製邀請碼">TRIP-XXXX</div>
         <div id="sandbox-warning-box" class="hidden p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 text-left leading-relaxed">
-          <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> 若朋友無法掃描網址，請朋友開啟 App 點選<strong>「輸入代碼」</strong>即可。
+          <i class="fa-solid fa-triangle-exclamation mr-1 text-amber-600"></i> 若朋友無法直接開啟預覽網址，請朋友開啟 App 點選<strong>「輸入代碼」</strong>即可加入。
         </div>
         <div class="space-y-2 pt-2">
           <button type="button" onclick="copyTripCodeOnly()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs shadow-sm ios-press">
@@ -390,6 +390,7 @@
                 <option value="餐飲">🍜 餐飲</option>
                 <option value="交通">🚕 交通</option>
                 <option value="住宿">🏨 住宿</option>
+                <option value="門票">🎟️ 門票</option>
                 <option value="其他">📦 其他</option>
               </select>
             </div>
@@ -398,8 +399,11 @@
             <div>
               <label class="block font-semibold text-slate-700 mb-1">幣別</label>
               <select id="expense-currency" onchange="handleCurrencyChange()" class="w-full px-2 py-2 bg-[#F2F2F7] rounded-xl font-medium text-xs outline-none">
-                <option value="TWD">TWD</option><option value="JPY">JPY</option>
-                <option value="USD">USD</option><option value="KRW">KRW</option>
+                <option value="TWD">TWD</option>
+                <option value="JPY">JPY</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="KRW">KRW</option>
               </select>
             </div>
             <div class="col-span-2">
@@ -566,77 +570,105 @@
     /* Google Apps Script API */
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxX8BZyocbPXRGPjIAcXOsOcgFfccqV6StdusLEhWM09doUSRc0dqhsPna9GHPvSPS2qw/exec';
 
-    /* Global State & Constants */
-    const DEFAULT_TRIPS = [{
-      id: 'trip_demo_tokyo',
-      code: 'TRIP-2026',
-      title: '東京五日賞櫻團',
-      host: '小明',
-      members: ['小明', '小華', '阿強', '婷婷'],
-      createdAt: '2026-03-15T10:00:00.000Z',
-      expenses: [
-        {
-          id: 'exp_1', item: '成田 N\'EX 車票', category: '交通', currency: 'JPY', originalAmount: 16000, exchangeRate: 0.215, amountTWD: 3440, payer: '小明', date: '2026-03-15', time: '11:30', splitMode: 'equal', participants: ['小明', '小華', '阿強', '婷婷'], shares: { '小明': 860, '小華': 860, '阿強': 860, '婷婷': 860 }
-        },
-        {
-          id: 'exp_2', item: '晴空塔景觀居酒屋', category: '餐飲', currency: 'JPY', originalAmount: 9000, exchangeRate: 0.215, amountTWD: 1935, payer: '阿強', date: '2026-03-15', time: '19:00', splitMode: 'equal', participants: ['阿強', '小華', '婷婷'], shares: { '阿強': 645, '小華': 645, '婷婷': 645 }
-        }
-      ]
-    }];
-
+    /* Global State & Constants - 徹底移除 Demo 假資料，以純淨狀態啟動 */
     const DEFAULT_RATES = { 'TWD': 1.0, 'JPY': 0.215, 'USD': 31.8, 'EUR': 34.5, 'KRW': 0.024 };
 
-    let trips = loadLocalTrips() || [...DEFAULT_TRIPS];
+    // 清理舊版殘留的 demo 假資料
+    (function cleanupLegacyDemo() {
+      try {
+        let cached = localStorage.getItem('tripsplit_trips');
+        if (cached && cached.includes('trip_demo_tokyo')) {
+          localStorage.removeItem('tripsplit_trips');
+        }
+      } catch(e) {}
+    })();
+
+    let trips = loadLocalTrips() || [];
     let deletedTripIds = loadDeletedTripIds();
     let currentTripId = localStorage.getItem('tripsplit_current_trip_id') || (trips.length > 0 ? trips[0].id : null);
-    let currentUserName = localStorage.getItem('tripsplit_current_user') || '小明';
+    let currentUserName = localStorage.getItem('tripsplit_current_user') || '';
     let expenseFilterMode = 'all';
     let currentSplitMode = 'equal';
     let pendingDeleteTripId = null;
     let html5QrScannerInstance = null;
     let isGASBusy = false;
 
-    window.onload = function() {
+    window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
       const joinCode = urlParams.get('joinTrip');
       
+      const label = document.getElementById('cloud-sync-label');
+      if (label) label.textContent = '讀取雲端資料庫...';
+
+      // 優先從 Google 試算表雲端獲取真實資料
+      await fetchAllFromCloud(false);
+
       if (joinCode) {
         document.getElementById('manual-trip-code').value = joinCode;
         handleManualJoinCode(joinCode);
-      } else if (!localStorage.getItem('tripsplit_current_user')) {
-        openModal('welcome-portal');
       } else {
-        if (!currentTripId && trips.length > 0) currentTripId = trips[0].id;
-        renderApp();
+        if (!currentTripId && trips.length > 0) {
+          currentTripId = trips[0].id;
+        }
+        
+        if (trips.length === 0) {
+          openModal('welcome-portal');
+        } else {
+          const activeTrip = getCurrentTrip();
+          if (activeTrip && !currentUserName) {
+            currentUserName = activeTrip.host || (activeTrip.members && activeTrip.members[0]) || '我';
+            localStorage.setItem('tripsplit_current_user', currentUserName);
+          }
+          renderApp();
+        }
       }
       
-      setInterval(() => { syncToCloud(false); }, 15000);
+      // 定時每 15 秒與 Google 試算表雙向同步最新進度
+      setInterval(() => { fetchAllFromCloud(false); }, 15000);
     };
 
     function saveLocalTrips() { localStorage.setItem('tripsplit_trips', JSON.stringify(trips)); }
-    function loadLocalTrips() { try { return JSON.parse(localStorage.getItem('tripsplit_trips')); } catch(e) { return null; } }
+    function loadLocalTrips() { 
+      try { 
+        const data = JSON.parse(localStorage.getItem('tripsplit_trips'));
+        return Array.isArray(data) ? data.filter(t => t && t.id !== 'trip_demo_tokyo') : null;
+      } catch(e) { return null; } 
+    }
     function loadDeletedTripIds() { try { return JSON.parse(localStorage.getItem('tripsplit_deleted_trips')) || []; } catch(e) { return []; } }
     function saveDeletedTripIds() { localStorage.setItem('tripsplit_deleted_trips', JSON.stringify(deletedTripIds)); }
 
     function renderApp() {
       const trip = getCurrentTrip();
       if (!trip) {
-        if (trips.length > 0) { currentTripId = trips[0].id; renderApp(); }
-        else { openModal('welcome-portal'); }
+        if (trips.length > 0) { 
+          currentTripId = trips[0].id; 
+          renderApp(); 
+        } else { 
+          openModal('welcome-portal'); 
+        }
         return;
       }
       localStorage.setItem('tripsplit_current_trip_id', currentTripId);
       
-      document.getElementById('current-user-label').textContent = currentUserName;
-      document.getElementById('trip-badge-code').textContent = trip.code;
-      document.getElementById('trip-title-display').textContent = trip.title;
-      document.getElementById('trip-host-display').textContent = trip.host;
+      if (!currentUserName && trip.members && trip.members.length > 0) {
+        currentUserName = trip.members[0];
+        localStorage.setItem('tripsplit_current_user', currentUserName);
+      }
+
+      document.getElementById('current-user-label').textContent = currentUserName || '未設定身分';
+      document.getElementById('trip-badge-code').textContent = trip.code || 'TRIP-NEW';
+      document.getElementById('trip-title-display').textContent = trip.title || '無標題任務';
+      document.getElementById('trip-host-display').textContent = trip.host || '無';
       document.getElementById('trip-members-count').textContent = (trip.members || []).length;
 
       const avatars = document.getElementById('trip-member-avatars');
-      avatars.innerHTML = (trip.members || []).map(m => `
-        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white cursor-pointer ${m === currentUserName ? 'bg-ios-blue text-white' : 'bg-slate-200 text-slate-700'}">${m.charAt(0)}</div>
-      `).join('');
+      if (trip.members && trip.members.length > 0) {
+        avatars.innerHTML = trip.members.map(m => `
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-white cursor-pointer ${m === currentUserName ? 'bg-ios-blue text-white' : 'bg-slate-200 text-slate-700'}">${m.charAt(0)}</div>
+        `).join('');
+      } else {
+        avatars.innerHTML = `<span class="text-xs text-ios-gray1">暫無成員</span>`;
+      }
 
       renderExpensesList();
       renderSettlement();
@@ -651,9 +683,7 @@
       
       let list = trip.expenses || [];
       if (expenseFilterMode === 'mine') {
-        // 只看我：列出我代墊的，或我有分攤的
         list = list.filter(e => e.payer === currentUserName || (e.participants || []).includes(currentUserName));
-        // 金額統計改為：當前用戶「應出的總分攤金額」
         const myTotalShare = (trip.expenses || []).reduce((sum, e) => {
           return sum + ((e.shares && e.shares[currentUserName]) || 0);
         }, 0);
@@ -668,7 +698,7 @@
       if (search) list = list.filter(e => e.item.toLowerCase().includes(search) || e.payer.toLowerCase().includes(search));
 
       if (list.length === 0) {
-        container.innerHTML = `<div class="bg-white p-6 text-center text-ios-gray1 border border-slate-100 rounded-2xl">尚無相符紀錄</div>`;
+        container.innerHTML = `<div class="bg-white p-6 text-center text-ios-gray1 border border-slate-100 rounded-2xl text-xs">尚無消費紀錄</div>`;
         return;
       }
 
@@ -755,8 +785,8 @@
     function renderPersonalOverview() {
       const trip = getCurrentTrip();
       if(!trip) return;
-      document.getElementById('my-avatar-initial').textContent = currentUserName.charAt(0);
-      document.getElementById('my-overview-name').textContent = currentUserName;
+      document.getElementById('my-avatar-initial').textContent = currentUserName ? currentUserName.charAt(0) : '我';
+      document.getElementById('my-overview-name').textContent = currentUserName || '未設定身分';
 
       let paid = 0, share = 0;
       (trip.expenses || []).forEach(e => {
@@ -843,13 +873,15 @@
     }
 
     function copyTripCodeOnly() {
-      const code = getCurrentTrip().code;
-      copyToClipboard(code);
-      showToast(`已複製邀請代碼: ${code}`);
+      const trip = getCurrentTrip();
+      if (!trip) return;
+      copyToClipboard(trip.code);
+      showToast(`已複製邀請代碼: ${trip.code}`);
     }
 
     function copyTripInviteLink() {
       const trip = getCurrentTrip();
+      if (!trip) return;
       const joinUrl = window.location.origin + window.location.pathname + '?joinTrip=' + trip.code;
       const msg = `✈️ 旅帳通邀請您加入【${trip.title}】共同分帳！\n點擊連結加入：${joinUrl}\n或在 App 輸入代碼：${trip.code}`;
       
@@ -952,6 +984,7 @@
       if (!trip.members.includes(myName)) {
         trip.members.push(myName);
       }
+      trip.updatedAt = Date.now();
       if (!trips.find(t => t.id === trip.id)) trips.push(trip);
       
       currentUserName = myName;
@@ -959,7 +992,7 @@
       localStorage.setItem('tripsplit_current_user', myName);
       
       saveLocalTrips();
-      syncToCloud(true);
+      syncTripToCloud(trip, 'saveTrip');
       closeModal('modal-join-trip');
       renderApp();
       showToast(`已成功加入 ${trip.title}！`);
@@ -982,8 +1015,8 @@
             handleManualJoinCode(code);
           }
         },
-        (errorMessage) => { /* scanning */ }
-      ).catch(err => {
+        () => { /* scanning */ }
+      ).catch(() => {
         showToast('無法啟動相機，請確認權限');
         closeCameraScannerModal();
       });
@@ -1015,6 +1048,7 @@
         code: 'TRIP-' + Math.floor(1000 + Math.random() * 9000),
         title, host, members,
         createdAt: new Date().toISOString(),
+        updatedAt: Date.now(),
         expenses: []
       };
 
@@ -1024,10 +1058,10 @@
       localStorage.setItem('tripsplit_current_user', host);
       
       saveLocalTrips();
-      syncToCloud(true);
+      syncTripToCloud(newTrip, 'saveTrip');
       closeModal('modal-create-trip');
       renderApp();
-      showToast('任務建立成功！');
+      showToast('任務建立成功並已同步！');
     }
 
     function openManageTripsModal() {
@@ -1060,14 +1094,23 @@
     function requestDeleteSpecificTrip(id) {
       pendingDeleteTripId = id;
       const t = trips.find(x => x.id === id);
-      document.getElementById('delete-trip-warning-text').textContent = `您確定要刪除「${t?.title || ''}」嗎？所有資料將無法恢復。`;
+      document.getElementById('delete-trip-warning-text').textContent = `您確定要刪除「${t?.title || ''}」嗎？所有資料與雲端紀錄將一併清除。`;
       openModal('modal-delete-trip');
     }
 
     function confirmDeleteTripAction() {
       if (!pendingDeleteTripId) return;
+      const targetTrip = trips.find(x => x.id === pendingDeleteTripId);
+      
       deletedTripIds.push(pendingDeleteTripId);
       saveDeletedTripIds();
+      
+      if (targetTrip) {
+        targetTrip.isDeleted = true;
+        targetTrip.updatedAt = Date.now();
+        syncTripToCloud(targetTrip, 'deleteTrip');
+      }
+
       trips = trips.filter(t => t.id !== pendingDeleteTripId);
       saveLocalTrips();
       
@@ -1076,11 +1119,11 @@
       }
       pendingDeleteTripId = null;
       closeModal('modal-delete-trip');
-      if(document.getElementById('modal-manage-trips').classList.contains('hidden') === false) {
+      if (!document.getElementById('modal-manage-trips').classList.contains('hidden')) {
         openManageTripsModal();
       }
-      if(currentTripId) renderApp(); else openModal('welcome-portal');
-      showToast('行程已刪除');
+      if (currentTripId) renderApp(); else openModal('welcome-portal');
+      showToast('行程已刪除，並自試算表清除');
     }
 
     function openAddExpenseModal() {
@@ -1191,21 +1234,23 @@
       };
 
       trip.expenses.push(exp);
+      trip.updatedAt = Date.now();
       saveLocalTrips();
-      syncToCloud(true);
+      syncTripToCloud(trip, 'saveTrip');
       closeExpenseModal();
       renderApp();
-      showToast('消費已記錄');
+      showToast('消費已記錄並同步');
     }
 
     function deleteExpenseItem(expId) {
       const trip = getCurrentTrip();
       if(!trip) return;
       trip.expenses = trip.expenses.filter(e => e.id !== expId);
+      trip.updatedAt = Date.now();
       saveLocalTrips();
-      syncToCloud(true);
+      syncTripToCloud(trip, 'saveTrip');
       renderApp();
-      showToast('已刪除紀錄');
+      showToast('已刪除紀錄並同步');
     }
 
     function openAddMemberModal() { openModal('modal-add-member'); }
@@ -1215,11 +1260,12 @@
       const name = document.getElementById('new-member-name-input').value.trim();
       if(name && !trip.members.includes(name)) {
         trip.members.push(name);
+        trip.updatedAt = Date.now();
         saveLocalTrips();
-        syncToCloud(true);
+        syncTripToCloud(trip, 'saveTrip');
         renderApp();
         closeModal('modal-add-member');
-        showToast('成員已加入');
+        showToast('成員已加入並同步');
       } else {
         showToast('成員名稱重複或無效');
       }
@@ -1227,11 +1273,14 @@
 
     function openSwitchIdentityModal() {
       const trip = getCurrentTrip();
-      const picks = document.getElementById('identity-quick-picks');
-      if (trip && trip.members) {
-        picks.innerHTML = trip.members.map(m => `<button type="button" onclick="selectIdentity('${m}')" class="px-3 py-1.5 bg-blue-50 text-ios-blue rounded-lg text-xs font-bold">${m}</button>`).join('');
-      } else {
-        picks.innerHTML = '<span class="text-xs text-ios-gray1">請先建立或選擇任務</span>';
+      const container = document.getElementById('identity-quick-picks');
+      if (container) {
+        const members = trip ? (trip.members || []) : [];
+        container.innerHTML = members.map(m => `
+          <button type="button" onclick="selectIdentity('${m}')" class="px-3 py-1.5 rounded-xl text-xs font-bold ${m === currentUserName ? 'bg-ios-blue text-white' : 'bg-slate-100 text-slate-700'} ios-press">
+            ${m}
+          </button>
+        `).join('') || '<span class="text-xs text-ios-gray1">暫無成員</span>';
       }
       openModal('modal-identity');
     }
@@ -1247,24 +1296,6 @@
     function confirmIdentityCustom() {
       const name = document.getElementById('identity-custom-input').value.trim();
       if(name) selectIdentity(name);
-    }
-
-    function copySettlementReport() {
-      const trip = getCurrentTrip();
-      if(!trip) return;
-      let text = `✈️【${trip.title}】分帳結算報表\n代碼：${trip.code}\n--------------------\n`;
-      const net = {};
-      (trip.members || []).forEach(m => net[m] = 0);
-      (trip.expenses || []).forEach(e => {
-        net[e.payer] = (net[e.payer] || 0) + (e.amountTWD || 0);
-        if (e.shares) Object.entries(e.shares).forEach(([m, s]) => net[m] = (net[m] || 0) - s);
-      });
-      text += `【每人應收 / 應付淨額】\n`;
-      Object.entries(net).forEach(([m, bal]) => {
-        text += `${m}: ${bal >= 0 ? `+NT$ ${Math.round(bal)}` : `-NT$ ${Math.abs(Math.round(bal))}`}\n`;
-      });
-      copyToClipboard(text);
-      showToast('結算報表已複製到剪貼簿！');
     }
 
     function exportCSV() {
@@ -1294,52 +1325,121 @@
       document.body.removeChild(el);
     }
 
+    /* 雲端資料庫核心同步模組 (強化試算表各類格式相容解析) */
     async function fetchFromCloud(code = null) {
       if (!GAS_API_URL) return null;
       try {
-        const url = code ? `${GAS_API_URL}?tripCode=${code}` : `${GAS_API_URL}?tripId=${currentTripId}`;
-        const res = await fetch(url);
+        const cacheBuster = `&_t=${Date.now()}`;
+        const url = code 
+          ? `${GAS_API_URL}?tripCode=${encodeURIComponent(code)}${cacheBuster}` 
+          : (currentTripId ? `${GAS_API_URL}?tripId=${encodeURIComponent(currentTripId)}${cacheBuster}` : `${GAS_API_URL}?_t=${Date.now()}`);
+        const res = await fetch(url, { cache: 'no-store' });
         const data = await res.json();
-        return data.success ? data.trip : null;
+        if (data.success) {
+          return parseTripData(data.trip || (data.trips && data.trips[0]));
+        }
+        return null;
       } catch(e) { return null; }
     }
 
-    async function syncToCloud(forceUpdate = false) {
-      if (!GAS_API_URL || isGASBusy || !currentTripId) return;
+    function parseTripData(raw) {
+      if (!raw) return null;
+      let t = raw;
+      if (typeof raw === 'string') {
+        try { t = JSON.parse(raw); } catch(e) { return null; }
+      }
+      if (!t || typeof t !== 'object') return null;
+      if (!Array.isArray(t.members)) t.members = t.members ? [String(t.members)] : [];
+      if (!Array.isArray(t.expenses)) t.expenses = [];
+      t.updatedAt = Number(t.updatedAt) || Date.now();
+      return t;
+    }
+
+    async function fetchAllFromCloud(isManual = false) {
+      if (!GAS_API_URL || isGASBusy) return;
       isGASBusy = true;
-      const badge = document.getElementById('cloud-sync-badge');
       const label = document.getElementById('cloud-sync-label');
-      
+      const badge = document.getElementById('cloud-sync-badge');
+      if (isManual && label) label.textContent = '同步校準中...';
+
       try {
-        if (forceUpdate) {
-          label.textContent = '同步中...';
-          const trip = getCurrentTrip();
-          if (trip) {
-            await fetch(GAS_API_URL, {
-              method: 'POST',
-              body: JSON.stringify({ trip }),
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-            });
-          }
-        } else {
-          const cloudTrip = await fetchFromCloud();
-          if (cloudTrip && cloudTrip.id === currentTripId) {
-            const localTrip = getCurrentTrip();
-            if (!localTrip || (cloudTrip.expenses || []).length > (localTrip.expenses || []).length) {
-              const idx = trips.findIndex(t => t.id === cloudTrip.id);
-              if (idx > -1) trips[idx] = cloudTrip; else trips.push(cloudTrip);
-              saveLocalTrips();
-              renderApp();
+        const cacheBuster = `?_t=${Date.now()}`;
+        const res = await fetch(`${GAS_API_URL}${cacheBuster}`, { cache: 'no-store' });
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.trips)) {
+          let hasChange = false;
+          let parsedCloudTrips = [];
+
+          data.trips.forEach(item => {
+            const parsed = parseTripData(item);
+            if (parsed && parsed.id !== 'trip_demo_tokyo' && !deletedTripIds.includes(parsed.id) && !parsed.isDeleted) {
+              parsedCloudTrips.push(parsed);
             }
+          });
+
+          parsedCloudTrips.forEach(cloudT => {
+            const localIdx = trips.findIndex(lt => lt.id === cloudT.id || (lt.code && lt.code === cloudT.code));
+            if (localIdx === -1) {
+              trips.push(cloudT);
+              hasChange = true;
+            } else {
+              const localT = trips[localIdx];
+              const cloudUpdated = Number(cloudT.updatedAt) || 0;
+              const localUpdated = Number(localT.updatedAt) || 0;
+
+              if (cloudUpdated >= localUpdated) {
+                trips[localIdx] = { ...localT, ...cloudT };
+                hasChange = true;
+              }
+            }
+          });
+
+          trips = trips.filter(t => t.id !== 'trip_demo_tokyo' && !deletedTripIds.includes(t.id));
+
+          if (!currentTripId && trips.length > 0) {
+            currentTripId = trips[0].id;
+            hasChange = true;
+          } else if (currentTripId && !trips.some(t => t.id === currentTripId)) {
+            currentTripId = trips.length > 0 ? trips[0].id : null;
+            hasChange = true;
+          }
+
+          if (hasChange) {
+            saveLocalTrips();
+            renderApp();
           }
         }
-        label.textContent = '試算表已連線';
-        badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
+        if (label) label.textContent = '試算表已同步';
+        if (badge) badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
+        if (isManual) showToast('已成功讀取 Google 試算表最新資料！');
       } catch(e) {
-        label.textContent = '離線暫存中';
-        badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
+        if (label) label.textContent = '連線試算表中...';
+        if (badge) badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
       } finally {
         isGASBusy = false;
+      }
+    }
+
+    async function syncTripToCloud(trip, action = 'saveTrip') {
+      if (!GAS_API_URL || !trip) return;
+      const label = document.getElementById('cloud-sync-label');
+      if (label) label.textContent = action === 'deleteTrip' ? '正在刪除雲端...' : '儲存至試算表...';
+      
+      try {
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ 
+            action: action,
+            tripId: trip.id,
+            tripCode: trip.code,
+            trip: trip 
+          }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        if (label) label.textContent = '試算表已同步';
+      } catch(e) {
+        if (label) label.textContent = '離線暫存中';
       }
     }
   </script>
