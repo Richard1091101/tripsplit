@@ -79,7 +79,7 @@
       user-select: auto;
       -webkit-user-select: auto;
       appearance: none;
-      font-size: 16px; /* 防止 iOS Safari 在點選輸入框時自動強制放大頁面 */
+      font-size: 16px;
     }
     .safe-top { padding-top: max(env(safe-area-inset-top, 0px), 10px); }
     .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px); }
@@ -106,7 +106,7 @@
 
 <body class="flex justify-center items-center text-slate-900 selection:bg-ios-blue selection:text-white">
 
-  <!-- Mobile App Frame: 在手機上自動滿版(100vw, 100dvh)，在電腦或平板上居中模擬 iPhone 比例 -->
+  <!-- Mobile App Frame -->
   <div class="w-full sm:max-w-md h-full sm:h-[94dvh] sm:rounded-[36px] bg-[#F2F2F7] relative flex flex-col shadow-2xl overflow-hidden sm:border sm:border-slate-300/60">
 
     <!-- iOS TOP NAVIGATION BAR (Fixed) -->
@@ -135,7 +135,7 @@
       </div>
     </header>
 
-    <!-- MOBILE SCROLLABLE CONTENT AREA (獨立滾動，不破壞上下導航欄) -->
+    <!-- MOBILE SCROLLABLE CONTENT AREA -->
     <main class="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-3.5 pb-24 no-scrollbar">
 
       <!-- TRIP HERO CARD -->
@@ -183,7 +183,7 @@
       <section id="tab-expenses-view" class="space-y-3">
         <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-100 flex items-center justify-between">
           <div>
-            <div class="text-[11px] text-ios-gray1 font-medium">行程總支出 (折合 TWD)</div>
+            <div id="stat-expense-label" class="text-[11px] text-ios-gray1 font-medium">行程總支出 (折合 TWD)</div>
             <div id="stat-total-expense" class="text-xl font-black text-slate-900 mt-0.5">NT$ 0</div>
           </div>
           <div class="flex bg-[#F2F2F7] p-1 rounded-xl text-xs font-semibold">
@@ -273,7 +273,7 @@
 
     </main>
 
-    <!-- iOS BOTTOM TAB BAR (Fixed inside mobile container) -->
+    <!-- iOS BOTTOM TAB BAR -->
     <nav class="shrink-0 z-30 bg-white/95 ios-blur border-t border-ios-separator safe-bottom px-2 py-1.5 flex items-center justify-around text-[10px] font-medium text-ios-gray1 shadow-lg">
       <button type="button" onclick="switchMainTab('expenses')" id="nav-tab-expenses" class="flex-1 py-1.5 flex flex-col items-center gap-0.5 text-ios-blue transition ios-press min-h-[44px]">
         <i class="fa-solid fa-receipt text-lg"></i>
@@ -574,9 +574,14 @@
       host: '小明',
       members: ['小明', '小華', '阿強', '婷婷'],
       createdAt: '2026-03-15T10:00:00.000Z',
-      expenses: [{
-        id: 'exp_1', item: '成田 N\'EX 車票', category: '交通', currency: 'JPY', originalAmount: 16000, exchangeRate: 0.215, amountTWD: 3440, payer: '小明', date: '2026-03-15', time: '11:30', splitMode: 'equal', participants: ['小明', '小華', '阿強', '婷婷'], shares: { '小明': 860, '小華': 860, '阿強': 860, '婷婷': 860 }
-      }]
+      expenses: [
+        {
+          id: 'exp_1', item: '成田 N\'EX 車票', category: '交通', currency: 'JPY', originalAmount: 16000, exchangeRate: 0.215, amountTWD: 3440, payer: '小明', date: '2026-03-15', time: '11:30', splitMode: 'equal', participants: ['小明', '小華', '阿強', '婷婷'], shares: { '小明': 860, '小華': 860, '阿強': 860, '婷婷': 860 }
+        },
+        {
+          id: 'exp_2', item: '晴空塔景觀居酒屋', category: '餐飲', currency: 'JPY', originalAmount: 9000, exchangeRate: 0.215, amountTWD: 1935, payer: '阿強', date: '2026-03-15', time: '19:00', splitMode: 'equal', participants: ['阿強', '小華', '婷婷'], shares: { '阿強': 645, '小華': 645, '婷婷': 645 }
+        }
+      ]
     }];
 
     const DEFAULT_RATES = { 'TWD': 1.0, 'JPY': 0.215, 'USD': 31.8, 'EUR': 34.5, 'KRW': 0.024 };
@@ -643,13 +648,23 @@
       if(!trip) return;
       const container = document.getElementById('expenses-container');
       const search = (document.getElementById('expense-search-input')?.value || '').toLowerCase();
-      const totalTWD = (trip.expenses || []).reduce((sum, e) => sum + (e.amountTWD || 0), 0);
-      document.getElementById('stat-total-expense').textContent = `NT$ ${Math.round(totalTWD).toLocaleString()}`;
-
+      
       let list = trip.expenses || [];
       if (expenseFilterMode === 'mine') {
+        // 只看我：列出我代墊的，或我有分攤的
         list = list.filter(e => e.payer === currentUserName || (e.participants || []).includes(currentUserName));
+        // 金額統計改為：當前用戶「應出的總分攤金額」
+        const myTotalShare = (trip.expenses || []).reduce((sum, e) => {
+          return sum + ((e.shares && e.shares[currentUserName]) || 0);
+        }, 0);
+        document.getElementById('stat-expense-label').textContent = `我的應付分攤 (折合 TWD)`;
+        document.getElementById('stat-total-expense').textContent = `NT$ ${Math.round(myTotalShare).toLocaleString()}`;
+      } else {
+        const totalTWD = (trip.expenses || []).reduce((sum, e) => sum + (e.amountTWD || 0), 0);
+        document.getElementById('stat-expense-label').textContent = `行程總支出 (折合 TWD)`;
+        document.getElementById('stat-total-expense').textContent = `NT$ ${Math.round(totalTWD).toLocaleString()}`;
       }
+
       if (search) list = list.filter(e => e.item.toLowerCase().includes(search) || e.payer.toLowerCase().includes(search));
 
       if (list.length === 0) {
@@ -792,8 +807,8 @@
 
     function setExpenseFilter(mode) {
       expenseFilterMode = mode;
-      document.getElementById('filter-btn-all').className = mode === 'all' ? 'px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue' : 'px-3 py-1 rounded-lg text-slate-500';
-      document.getElementById('filter-btn-mine').className = mode === 'mine' ? 'px-3 py-1 rounded-lg bg-white shadow-xs text-ios-blue' : 'px-3 py-1 rounded-lg text-slate-500';
+      document.getElementById('filter-btn-all').className = mode === 'all' ? 'px-3.5 py-1.5 rounded-lg bg-white shadow-xs text-ios-blue min-h-[30px]' : 'px-3.5 py-1.5 rounded-lg text-slate-500 min-h-[30px]';
+      document.getElementById('filter-btn-mine').className = mode === 'mine' ? 'px-3.5 py-1.5 rounded-lg bg-white shadow-xs text-ios-blue min-h-[30px]' : 'px-3.5 py-1.5 rounded-lg text-slate-500 min-h-[30px]';
       renderExpensesList();
     }
 
@@ -892,6 +907,22 @@
       currentUserName = myName;
       
       handleManualJoinCode(code);
+    }
+
+    function handleManualJoinCode(code) {
+      let trip = trips.find(t => t.code.toUpperCase() === code.toUpperCase());
+      if (trip) {
+        promptJoinTrip(trip);
+      } else {
+        showToast('正在連線查詢行程...');
+        fetchFromCloud(code).then(cloudTrip => {
+          if (cloudTrip) {
+            promptJoinTrip(cloudTrip);
+          } else {
+            showToast('查無此邀請碼，請確認後重試');
+          }
+        });
+      }
     }
 
     function promptJoinTrip(trip) {
@@ -1303,10 +1334,10 @@
           }
         }
         label.textContent = '試算表已連線';
-        badge.className = 'ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
+        badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
       } catch(e) {
         label.textContent = '離線暫存中';
-        badge.className = 'ios-press px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
+        badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
       } finally {
         isGASBusy = false;
       }
