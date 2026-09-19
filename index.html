@@ -1333,7 +1333,7 @@
         const url = code 
           ? `${GAS_API_URL}?tripCode=${encodeURIComponent(code)}${cacheBuster}` 
           : (currentTripId ? `${GAS_API_URL}?tripId=${encodeURIComponent(currentTripId)}${cacheBuster}` : `${GAS_API_URL}?_t=${Date.now()}`);
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(url, { method: 'GET', redirect: 'follow', cache: 'no-store' });
         const data = await res.json();
         if (data.success) {
           return parseTripData(data.trip || (data.trips && data.trips[0]));
@@ -1364,7 +1364,16 @@
 
       try {
         const cacheBuster = `?_t=${Date.now()}`;
-        const res = await fetch(`${GAS_API_URL}${cacheBuster}`, { cache: 'no-store' });
+        const res = await fetch(`${GAS_API_URL}${cacheBuster}`, { 
+          method: 'GET', 
+          redirect: 'follow', 
+          cache: 'no-store' 
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP 錯誤狀態碼: ${res.status}`);
+        }
+
         const data = await res.json();
 
         if (data.success && Array.isArray(data.trips)) {
@@ -1414,8 +1423,12 @@
         if (badge) badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 cursor-pointer';
         if (isManual) showToast('已成功讀取 Google 試算表最新資料！');
       } catch(e) {
-        if (label) label.textContent = '連線試算表中...';
-        if (badge) badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 cursor-pointer';
+        if (label) label.textContent = '同步失敗(點此檢查)';
+        if (badge) badge.className = 'ios-press px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200 flex items-center gap-1 cursor-pointer';
+        if (isManual) {
+          showToast('連線失敗，請點選上方標籤查看原因');
+          console.error("GAS Sync Error:", e);
+        }
       } finally {
         isGASBusy = false;
       }
@@ -1429,6 +1442,7 @@
       try {
         await fetch(GAS_API_URL, {
           method: 'POST',
+          mode: 'no-cors', // 解決 Google Apps Script POST CORS 限制
           body: JSON.stringify({ 
             action: action,
             tripId: trip.id,
